@@ -1,0 +1,26 @@
+{
+  "name": "george-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable multi-agent orchestration core for private project automation.",
+  "scripts": {
+    "bootstrap": "tsx src/cli/bootstrap.ts",
+    "dry-run": "tsx src/cli/dry-run.ts",
+    "approvals:list": "tsx src/cli/list-approvals.ts",
+    "approve": "tsx src/cli/approve.ts",
+    "reject": "tsx src/cli/reject.ts",
+    "resume": "tsx src/cli/resume-run.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run build && npm run test"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.1"
+  }
+}

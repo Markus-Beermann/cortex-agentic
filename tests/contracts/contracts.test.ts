@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+
+import { TaskSchema, OutputSchema } from "../../src/core/contracts";
+
+describe("contracts", () => {
+  it("accepts a valid task contract", () => {
+    const result = TaskSchema.safeParse({
+      id: "task-1",
+      runId: "run-1",
+      projectId: "project-1",
+      title: "Coordinate work",
+      objective: "Route the next role",
+      requestedRole: "coordinator",
+      constraints: [],
+      inputContext: [],
+      acceptanceCriteria: ["Pick the next role"],
+      status: "queued",
+      approvalMode: "auto",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an output contract without a next action", () => {
+    const result = OutputSchema.safeParse({
+      id: "output-1",
+      taskId: "task-1",
+      roleId: "reviewer",
+      summary: "Missing next action",
+      decisions: [],
+      blockers: [],
+      artifacts: [],
+      createdAt: new Date().toISOString()
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
