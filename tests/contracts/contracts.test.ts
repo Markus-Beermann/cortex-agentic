@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  OutputDraftSchema,
   OutputSchema,
   ReflectionReportSchema,
   RegistryEntrySchema,
@@ -41,6 +42,27 @@ describe("contracts", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("accepts an output draft without runtime-managed fields", () => {
+    const result = OutputDraftSchema.safeParse({
+      summary: "Route the goal to architecture.",
+      decisions: ["Classify the goal before implementation."],
+      blockers: [],
+      artifacts: [],
+      nextAction: {
+        kind: "handoff",
+        targetRole: "architect",
+        taskTitle: "Design the execution plan",
+        taskObjective: "Turn the goal into bounded work packages.",
+        acceptanceCriteria: ["Define the next implementation slice."],
+        context: ["Original goal received."],
+        rationale: "Architecture should define the next bounded task.",
+        approvalMode: "auto"
+      }
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("accepts a registry entry with stable role IDs and persona aliases", () => {

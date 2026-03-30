@@ -3,4 +3,5 @@ dist/
 coverage/
 .orchestrator/
 .DS_Store
-
+.env
+CLAUDE.md

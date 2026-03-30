@@ -89,7 +89,8 @@ function buildUserPrompt(request: ProviderRequest): string {
   return [
     `Produce the next output contract draft for task "${request.task.title}".`,
     `The target role is ${request.roleId}.`,
-    "Return JSON only."
+    "Call the submit_output_contract tool exactly once with the final structured result.",
+    "Do not answer with plain text when the tool can be used."
   ].join("\n");
 }
 

@@ -129,11 +129,13 @@ describe("AnthropicProviderAdapter", () => {
         JSON.stringify({
           id: "msg_123",
           model: "claude-sonnet-4-6",
-          stop_reason: "end_turn",
+          stop_reason: "tool_use",
           content: [
             {
-              type: "text",
-              text: JSON.stringify({
+              type: "tool_use",
+              id: "toolu_123",
+              name: "submit_output_contract",
+              input: {
                 summary: "George routed the goal to architecture.",
                 decisions: ["Classify the goal first."],
                 blockers: [],
@@ -148,7 +150,7 @@ describe("AnthropicProviderAdapter", () => {
                   rationale: "Architecture should define the next bounded task.",
                   approvalMode: "auto"
                 }
-              })
+              }
             }
           ],
           usage: {
@@ -178,13 +180,137 @@ describe("AnthropicProviderAdapter", () => {
     const requestBody = JSON.parse(String(requestInit.body)) as {
       model: string;
       system: string;
+      tool_choice: { type: string; name: string };
+      tools: Array<{ name: string; input_schema: Record<string, unknown> }>;
     };
     expect(requestBody.model).toBe("claude-sonnet-4-6");
     expect(requestBody.system).toContain("Route work safely.");
+    expect(requestBody.tool_choice).toEqual({
+      type: "tool",
+      name: "submit_output_contract"
+    });
+    expect(requestBody.tools[0]?.name).toBe("submit_output_contract");
+    expect(requestBody.tools[0]?.input_schema).toMatchObject({
+      type: "object",
+      required: ["summary", "decisions", "blockers", "artifacts", "nextAction"]
+    });
     expect(response.model).toBe("claude-sonnet-4-6");
     expect(response.output.taskId).toBe("task-1");
     expect(response.output.roleId).toBe("coordinator");
     expect(response.output.nextAction.kind).toBe("handoff");
-    expect(response.diagnostics).toContain("Stop reason: end_turn.");
+    expect(response.diagnostics).toContain("Attempt 1 stop reason: tool_use.");
+  });
+
+  it("retries once when the first tool payload is invalid", async () => {
+    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-anthropic-provider-"));
+    temporaryDirectories.push(rootPath);
+
+    const bootstrapPath = path.join(rootPath, "docs/agent-context/roles/coordinator.bootstrap.md");
+    await mkdir(path.dirname(bootstrapPath), { recursive: true });
+    await writeFile(
+      bootstrapPath,
+      "# Coordinator Bootstrap\n\nRoute work safely.\n",
+      "utf8"
+    );
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "msg_invalid",
+            model: "claude-sonnet-4-6",
+            stop_reason: "tool_use",
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_invalid",
+                name: "submit_output_contract",
+                input: {
+                  summary: "George started routing.",
+                  decisions: ["Classify first."],
+                  blockers: [],
+                  artifacts: []
+                }
+              }
+            ],
+            usage: {
+              input_tokens: 100,
+              output_tokens: 20
+            }
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json"
+            }
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "msg_repair",
+            model: "claude-sonnet-4-6",
+            stop_reason: "tool_use",
+            content: [
+              {
+                type: "tool_use",
+                id: "toolu_repair",
+                name: "repair_next_action",
+                input: {
+                  nextAction: {
+                    kind: "handoff",
+                    targetRole: "architect",
+                    taskTitle: "Design the execution plan",
+                    taskObjective: "Turn the goal into bounded work packages.",
+                    acceptanceCriteria: ["Define the first implementation slice."],
+                    context: ["Original goal received."],
+                    rationale: "Architecture should define the next bounded task.",
+                    approvalMode: "auto"
+                  }
+                }
+              }
+            ],
+            usage: {
+              input_tokens: 120,
+              output_tokens: 40
+            }
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json"
+            }
+          }
+        )
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const adapter = new AnthropicProviderAdapter(rootPath, {
+      apiKey: "test-key",
+      maxAttempts: 2
+    });
+    const response = await adapter.execute(createProviderRequest());
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondRequest = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    const secondBody = JSON.parse(String(secondRequest.body)) as {
+      tool_choice: { name: string };
+      tools: Array<{ name: string; input_schema: Record<string, unknown> }>;
+      messages: Array<{ content: string }>;
+    };
+    expect(secondBody.tool_choice.name).toBe("repair_next_action");
+    expect(secondBody.tools[0]?.name).toBe("repair_next_action");
+    expect(secondBody.tools[0]?.input_schema).toMatchObject({
+      type: "object",
+      required: ["nextAction"]
+    });
+    expect(secondBody.messages[0]?.content).toContain("missing the required nextAction object");
+    expect(response.output.nextAction.kind).toBe("handoff");
+    expect(
+      response.diagnostics.some((entry) => entry.startsWith("Attempt 2 stop reason: tool_use."))
+    ).toBe(true);
   });
 });

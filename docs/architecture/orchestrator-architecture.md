@@ -45,6 +45,8 @@ Both speak the same v1 provider language. The Anthropic adapter builds prompts f
 - the selected project context for the active role
 - a run-progress snapshot of already completed work
 
+For structured output, `Zod` remains the source of truth. George derives the Anthropic tool `input_schema` from the `OutputDraftSchema`, forces tool use, and validates the returned tool input again before accepting it as an output contract.
+
 The provider adapter is responsible for returning a validated output contract, not a vaguely inspirational paragraph pretending to be one.
 
 ### Project Adapters

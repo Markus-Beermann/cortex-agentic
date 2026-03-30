@@ -17,3 +17,6 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added run/event inspection commands, role-specific context selection, and a provider adapter v1 envelope.
 - Added `run:list -- --status=waiting_approval` so human intervention points are visible without scanning every run.
 - Added a bootstrap-aware prompt builder and a real Anthropic provider adapter behind the v1 provider port.
+- Replaced free-form Anthropic JSON parsing with Zod-derived tool schemas so structured output is contract-led instead of luck-led.
+- Added a bounded Anthropic self-correction retry when the first tool payload misses required contract fields.
+- Split Anthropic recovery into a targeted `nextAction` repair path instead of rerolling the full output draft.

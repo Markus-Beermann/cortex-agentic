@@ -30,23 +30,30 @@ export const NextActionSchema = z.discriminatedUnion("kind", [
   })
 ]);
 
-export const OutputSchema = z.object({
-  id: IdentifierSchema,
-  taskId: IdentifierSchema,
-  roleId: RoleIdSchema,
+export const OutputDraftSchema = z.object({
   summary: z.string().min(1),
   decisions: z.array(z.string()).default([]),
   blockers: z.array(z.string()).default([]),
   artifacts: z.array(OutputArtifactSchema).default([]),
-  nextAction: NextActionSchema,
+  nextAction: NextActionSchema
+});
+
+export const OutputSchema = OutputDraftSchema.extend({
+  id: IdentifierSchema,
+  taskId: IdentifierSchema,
+  roleId: RoleIdSchema,
   createdAt: TimestampSchema
 });
 
 export type OutputArtifact = z.infer<typeof OutputArtifactSchema>;
 export type NextAction = z.infer<typeof NextActionSchema>;
+export type OutputDraft = z.infer<typeof OutputDraftSchema>;
 export type Output = z.infer<typeof OutputSchema>;
+
+export function validateOutputDraft(value: unknown): OutputDraft {
+  return OutputDraftSchema.parse(value);
+}
 
 export function validateOutput(value: unknown): Output {
   return OutputSchema.parse(value);
 }
-
