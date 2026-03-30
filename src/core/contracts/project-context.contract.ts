@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ProjectContextsSchema } from "./context-selection.contract";
 import { IdentifierSchema } from "./shared.contract";
 
 export const ProjectDocumentKindSchema = z.enum([
@@ -40,6 +41,7 @@ export const ProjectContextSchema = z.object({
   repository: ProjectRepositorySchema,
   stack: ProjectStackSchema,
   focusPaths: z.array(z.string()).default([]),
+  contexts: ProjectContextsSchema,
   notes: z.array(z.string()).default([])
 });
 

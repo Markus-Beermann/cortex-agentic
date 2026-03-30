@@ -1,19 +1,10 @@
 import type {
-  Output,
-  ProjectContext,
-  RegistryEntry,
-  RunState,
-  Task
+  ProviderRequest,
+  ProviderResponse
 } from "../../core/contracts";
-
-export interface ProviderExecutionContext {
-  projectContext: ProjectContext;
-  run: RunState;
-  task: Task;
-  role: RegistryEntry;
-}
 
 export interface ProviderPort {
   readonly id: string;
-  execute(context: ProviderExecutionContext): Promise<Output>;
+  readonly version: "v1";
+  execute(request: ProviderRequest): Promise<ProviderResponse>;
 }

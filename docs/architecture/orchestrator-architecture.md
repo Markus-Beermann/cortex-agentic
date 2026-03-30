@@ -31,7 +31,9 @@ The core role contract separates stable `roleId` values from persona-facing name
 
 ### Provider Adapters
 
-Providers implement a common execution port. Phase 1 ships only a deterministic `noop` adapter for dry runs and contract tests.
+Providers implement a common execution port. Provider adapter v1 accepts a structured provider request and returns a provider response envelope with diagnostics plus the output contract.
+
+Phase 1 still ships only a deterministic `noop` adapter for dry runs and contract tests, but it now speaks the same v1 provider language future adapters will use.
 
 ### Project Adapters
 
@@ -44,6 +46,7 @@ Phase 1 project context includes:
 - detected stack and manifests
 - governance, bootstrap, architecture, and log documents
 - focus paths for the next planning or implementation step
+- separate planning, implementation, and review context selections
 - runtime path hints
 
 ### State and Logs
@@ -68,6 +71,10 @@ Human milestone logging remains separate in `docs/project/collaboration-log.md`.
 6. A handoff may create the next task.
 7. Approval-sensitive execution or handoffs create explicit approval requests for the human owner.
 8. The run either continues, waits for approval, fails, or completes.
+
+## Reserved Specialist Contract
+
+`Sigmund` remains out of the Phase 1 runtime registry. The repository only defines a `ReflectionReport` contract for future reflection-oriented work so the role can arrive later without improvising its output shape.
 
 ## Design Constraints
 

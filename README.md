@@ -24,8 +24,10 @@ George currently provides:
 - Typed contracts for tasks, outputs, handoffs, registry entries, and run state
 - A file-backed state layer for registry, tasks, outputs, handoffs, run state, and event logs
 - A structured project context model for repository docs, stack detection, git metadata, and focused changed-file signals
+- Role-specific context selection for planning, implementation, and review
 - A reusable orchestration loop with policy gates
 - A `noop` provider for deterministic dry runs
+- Provider adapter v1 request/response envelopes
 - Pending approval requests with explicit approve, reject, and resume commands
 - Governance rules kept separate from role-specific bootstraps
 
@@ -42,6 +44,7 @@ George does not yet provide:
 npm install
 npm run bootstrap
 npm run registry:list
+npm run run:list
 npm run dry-run
 npm run approvals:list
 npm run check
@@ -52,6 +55,12 @@ npm run check
 `npm run registry:list` shows the registered agents with technical role IDs and human personas.
 
 `npm run registry:inspect -- George` resolves a specific agent by role ID, technical name, persona name, or alias.
+
+`npm run run:list` shows known runs with status, queue counts, and approval state.
+
+`npm run run:inspect -- <run-id>` shows a run together with tasks, outputs, handoffs, approvals, and event count.
+
+`npm run events:show -- <run-id> --limit=20` shows event log entries for a specific run.
 
 `npm run dry-run` executes a deterministic orchestration pass using the built-in `noop` provider and writes run artifacts into `.orchestrator/`.
 
@@ -88,5 +97,6 @@ tests/
 - Keep governance rules separate from operational bootstraps
 - Keep a human owner in the decision loop for approval-sensitive work
 - Keep technical role IDs stable and treat persona names as a separate alias layer
+- Prefer role-specific context selection over dumping raw repository state on every agent
 - Start with semi-automatic orchestration, not mythology
 - Add providers and project adapters without changing core contracts

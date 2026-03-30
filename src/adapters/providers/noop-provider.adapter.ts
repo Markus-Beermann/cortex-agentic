@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import type { ApprovalMode, Output, RoleId, Task } from "../../core/contracts";
-import type { ProviderExecutionContext, ProviderPort } from "./provider.port";
+import type {
+  ApprovalMode,
+  Output,
+  ProviderRequest,
+  ProviderResponse,
+  RoleId,
+  Task
+} from "../../core/contracts";
+import type { ProviderPort } from "./provider.port";
 
 export interface NoopProviderOptions {
   handoffApprovalModeByRole?: Partial<Record<RoleId, ApprovalMode>>;
@@ -13,20 +20,43 @@ function nowIso(): string {
 
 export class NoopProviderAdapter implements ProviderPort {
   public readonly id = "noop";
+  public readonly version = "v1" as const;
 
   public constructor(private readonly options: NoopProviderOptions = {}) {}
 
-  public async execute(context: ProviderExecutionContext): Promise<Output> {
+  public async execute(request: ProviderRequest): Promise<ProviderResponse> {
     const timestamp = nowIso();
-    const task = context.task;
-    const personaName = context.role.personaName;
-    const projectContext = context.projectContext;
+    const task = request.task;
+    const personaName = request.personaName;
+    const projectContext = request.projectContext;
+    const selectedContext = request.selectedContext;
     const stackSummary = projectContext.stack.languages.join(", ") || "unknown stack";
     const focusSummary =
-      projectContext.focusPaths.length > 0
-        ? projectContext.focusPaths.slice(0, 3).join(", ")
+      selectedContext.focusPaths.length > 0
+        ? selectedContext.focusPaths.slice(0, 3).join(", ")
         : "no focused paths";
+    const output = this.buildOutput(task, personaName, projectContext, stackSummary, focusSummary, timestamp);
 
+    return {
+      providerId: this.id,
+      adapterVersion: this.version,
+      model: null,
+      diagnostics: [
+        `Selected context purpose: ${selectedContext.purpose}.`,
+        `Focus paths considered: ${selectedContext.focusPaths.length}.`
+      ],
+      output
+    };
+  }
+
+  private buildOutput(
+    task: Task,
+    personaName: string,
+    projectContext: ProviderRequest["projectContext"],
+    stackSummary: string,
+    focusSummary: string,
+    timestamp: string
+  ): Output {
     switch (task.requestedRole) {
       case "coordinator":
         return {

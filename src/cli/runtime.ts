@@ -14,10 +14,18 @@ import { RegistryStore } from "../state/registry.store";
 import { RunStateStore } from "../state/run-state.store";
 import { TaskStore } from "../state/task.store";
 
-export async function createCliSessionRunner(rootPath: string): Promise<{
+export interface CliRuntime {
   runner: SessionRunner;
+  registryStore: RegistryStore;
+  taskStore: TaskStore;
+  outputStore: OutputStore;
+  handoffStore: HandoffStore;
   approvalRequestStore: ApprovalRequestStore;
-}> {
+  runStateStore: RunStateStore;
+  eventLogStore: EventLogStore;
+}
+
+export async function createCliSessionRunner(rootPath: string): Promise<CliRuntime> {
   return createCliSessionRunnerWithOptions(rootPath, {});
 }
 
@@ -26,30 +34,38 @@ export async function createCliSessionRunnerWithOptions(
   options: {
     providerOptions?: NoopProviderOptions;
   }
-): Promise<{
-  runner: SessionRunner;
-  approvalRequestStore: ApprovalRequestStore;
-}> {
+): Promise<CliRuntime> {
   const registryStore = new RegistryStore(rootPath);
   await registryStore.seed(createDefaultRegistry());
 
   const approvalRequestStore = new ApprovalRequestStore(rootPath);
+  const taskStore = new TaskStore(rootPath);
+  const outputStore = new OutputStore(rootPath);
+  const handoffStore = new HandoffStore(rootPath);
+  const runStateStore = new RunStateStore(rootPath);
+  const eventLogStore = new EventLogStore(rootPath);
 
   const runner = new SessionRunner({
     provider: new NoopProviderAdapter(options.providerOptions),
     projectAdapter: new FilesystemProjectAdapter(rootPath),
     policy: new DefaultExecutionPolicy(),
     registryStore,
-    taskStore: new TaskStore(rootPath),
-    outputStore: new OutputStore(rootPath),
-    handoffStore: new HandoffStore(rootPath),
+    taskStore,
+    outputStore,
+    handoffStore,
     approvalRequestStore,
-    runStateStore: new RunStateStore(rootPath),
-    eventLogStore: new EventLogStore(rootPath)
+    runStateStore,
+    eventLogStore
   });
 
   return {
     runner,
-    approvalRequestStore
+    registryStore,
+    taskStore,
+    outputStore,
+    handoffStore,
+    approvalRequestStore,
+    runStateStore,
+    eventLogStore
   };
 }

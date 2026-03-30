@@ -42,6 +42,11 @@ export class ApprovalRequestStore {
     return requests.filter((request) => request.status === "pending");
   }
 
+  public async listByRun(runId: string): Promise<ApprovalRequest[]> {
+    const requests = await this.list();
+    return requests.filter((request) => request.runId === runId);
+  }
+
   public async findPendingBySubject(
     runId: string,
     subjectId: string

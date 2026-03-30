@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { RunEvent } from "../core/contracts";
 import { validateRunEvent } from "../core/contracts";
-import { appendJsonLine, nowIso } from "./file-store";
+import { appendJsonLine, nowIso, readJsonLinesFileIfExists } from "./file-store";
 
 export class EventLogStore {
   private readonly directoryPath: string;
@@ -29,8 +29,12 @@ export class EventLogStore {
     return event;
   }
 
+  public async list(runId: string): Promise<RunEvent[]> {
+    const events = await readJsonLinesFileIfExists<RunEvent>(this.filePath(runId));
+    return events.map(validateRunEvent);
+  }
+
   private filePath(runId: string): string {
     return path.join(this.directoryPath, `${runId}.jsonl`);
   }
 }
-

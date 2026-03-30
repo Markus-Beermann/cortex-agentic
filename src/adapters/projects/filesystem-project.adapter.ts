@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 
 import type { ProjectContext, ProjectDocument } from "../../core/contracts";
 import { validateProjectContext } from "../../core/contracts";
+import { buildProjectContexts } from "./context-selection";
 import type { ProjectAdapterPort } from "./project-adapter.port";
 
 const execFileAsync = promisify(execFile);
@@ -16,6 +17,11 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     const documents = await this.collectDocuments();
     const repository = await this.collectRepositoryInfo();
     const stack = await this.collectStackInfo();
+    const contexts = buildProjectContexts({
+      documents,
+      stack,
+      repository
+    });
 
     return validateProjectContext({
       projectId,
@@ -24,7 +30,8 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
       documents,
       repository,
       stack,
-      focusPaths: this.buildFocusPaths(documents, stack, repository),
+      focusPaths: contexts.planningContext.focusPaths,
+      contexts,
       notes: this.buildNotes(repository)
     });
   }
@@ -196,29 +203,6 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     }
 
     return Array.from(languages);
-  }
-
-  private buildFocusPaths(
-    documents: ProjectDocument[],
-    stack: ProjectContext["stack"],
-    repository: ProjectContext["repository"]
-  ): string[] {
-    const dynamicFocusPaths = [...repository.changedFiles, ...repository.untrackedFiles];
-
-    if (dynamicFocusPaths.length > 0) {
-      return this.unique(dynamicFocusPaths).slice(0, 12);
-    }
-
-    const fallbackFocusPaths = [
-      ...documents
-        .filter((document) =>
-          ["governance", "bootstrap", "architecture", "manifest"].includes(document.kind)
-        )
-        .map((document) => document.path),
-      ...stack.configs
-    ];
-
-    return this.unique(fallbackFocusPaths).slice(0, 12);
   }
 
   private buildNotes(repository: ProjectContext["repository"]): string[] {

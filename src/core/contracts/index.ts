@@ -7,4 +7,7 @@ export * from "./registry-entry.contract";
 export * from "./run-state.contract";
 export * from "./run-event.contract";
 export * from "./approval-request.contract";
+export * from "./context-selection.contract";
 export * from "./project-context.contract";
+export * from "./provider.contract";
+export * from "./reflection-report.contract";

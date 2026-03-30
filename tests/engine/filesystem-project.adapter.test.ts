@@ -66,6 +66,11 @@ describe("FilesystemProjectAdapter", () => {
     );
     expect(projectContext.focusPaths).toContain("AGENTS.md");
     expect(projectContext.focusPaths).toContain("draft.txt");
+    expect(projectContext.contexts.planningContext.purpose).toBe("planning");
+    expect(projectContext.contexts.implementationContext.purpose).toBe("implementation");
+    expect(projectContext.contexts.reviewContext.purpose).toBe("review");
+    expect(projectContext.contexts.planningContext.focusPaths).toContain("AGENTS.md");
+    expect(projectContext.contexts.reviewContext.focusPaths).toContain("draft.txt");
     expect(projectContext.runtimePath).toBe(path.join(rootPath, ".orchestrator"));
   });
 });

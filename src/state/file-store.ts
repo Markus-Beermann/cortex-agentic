@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export function nowIso(): string {
@@ -36,6 +36,36 @@ export async function appendJsonLine(filePath: string, value: unknown): Promise<
   await appendFile(filePath, `${JSON.stringify(value)}\n`, "utf8");
 }
 
+export async function listFilesIfExists(directoryPath: string): Promise<string[]> {
+  try {
+    await ensureDirectory(directoryPath);
+    return await readdir(directoryPath);
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+export async function readJsonLinesFileIfExists<T>(filePath: string): Promise<T[]> {
+  try {
+    const content = await readFile(filePath, "utf8");
+    return content
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => JSON.parse(line) as T);
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
 function isMissingFileError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -44,4 +74,3 @@ function isMissingFileError(error: unknown): boolean {
     error.code === "ENOENT"
   );
 }
-

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { OutputSchema, RegistryEntrySchema, TaskSchema } from "../../src/core/contracts";
+import {
+  OutputSchema,
+  ReflectionReportSchema,
+  RegistryEntrySchema,
+  TaskSchema
+} from "../../src/core/contracts";
 
 describe("contracts", () => {
   it("accepts a valid task contract", () => {
@@ -49,6 +54,23 @@ describe("contracts", () => {
       bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
       capabilities: ["routing"],
       allowedHandoffs: ["architect"]
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a valid reflection report contract for Sigmund later", () => {
+    const result = ReflectionReportSchema.safeParse({
+      id: "reflection-1",
+      runId: "run-1",
+      taskId: null,
+      perspective: "communication",
+      summary: "The user needs tighter feedback loops and clearer disagreement.",
+      observations: ["The user values directness over reassurance."],
+      tensions: ["Too much abstraction reduces trust."],
+      recommendations: ["Provide sharper intermediate checkpoints."],
+      confidence: 0.82,
+      createdAt: new Date().toISOString()
     });
 
     expect(result.success).toBe(true);

@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { RunState } from "../core/contracts";
 import { validateRunState } from "../core/contracts";
-import { readJsonFile, writeJsonFile } from "./file-store";
+import { listFilesIfExists, readJsonFile, writeJsonFile } from "./file-store";
 
 export class RunStateStore {
   private readonly directoryPath: string;
@@ -21,8 +21,18 @@ export class RunStateStore {
     return validateRunState(await readJsonFile<RunState>(this.filePath(runId)));
   }
 
+  public async list(): Promise<RunState[]> {
+    const entries = await listFilesIfExists(this.directoryPath);
+    const runs = await Promise.all(
+      entries
+        .filter((entry) => entry.endsWith(".json"))
+        .map((entry) => this.get(entry.replace(/\.json$/u, "")))
+    );
+
+    return runs.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
+
   private filePath(runId: string): string {
     return path.join(this.directoryPath, `${runId}.json`);
   }
 }
-

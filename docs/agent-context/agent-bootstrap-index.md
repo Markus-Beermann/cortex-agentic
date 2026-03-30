@@ -14,6 +14,7 @@ Stable rules are defined in `docs/MASTER_Agent_Rules.md`. These bootstrap files 
 ## Reserved Specialist Personas
 
 - `Sigmund` is reserved as a future psychology or reflection specialist and is intentionally not part of the Phase 1 core registry.
+- `Sigmund` is expected to emit the `ReflectionReport` contract once a real reflection loop exists.
 
 ## Usage
 

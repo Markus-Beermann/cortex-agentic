@@ -30,14 +30,17 @@ async function createRunner(
 ): Promise<{
   runner: SessionRunner;
   approvalRequestStore: ApprovalRequestStore;
+  eventLogStore: EventLogStore;
 }> {
   const registryStore = new RegistryStore(rootPath);
   await registryStore.seed(createDefaultRegistry());
 
   const approvalRequestStore = new ApprovalRequestStore(rootPath);
+  const eventLogStore = new EventLogStore(rootPath);
 
   return {
     approvalRequestStore,
+    eventLogStore,
     runner: new SessionRunner({
       provider: new NoopProviderAdapter(options.providerOptions),
       projectAdapter: new FilesystemProjectAdapter(rootPath),
@@ -48,7 +51,7 @@ async function createRunner(
       handoffStore: new HandoffStore(rootPath),
       approvalRequestStore,
       runStateStore: new RunStateStore(rootPath),
-      eventLogStore: new EventLogStore(rootPath)
+      eventLogStore
     })
   };
 }
@@ -64,7 +67,7 @@ describe("SessionRunner", () => {
     const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
     temporaryDirectories.push(rootPath);
 
-    const { runner } = await createRunner(rootPath);
+    const { runner, eventLogStore } = await createRunner(rootPath);
     const run = await runner.initializeRun({
       projectId: "demo-project",
       goal: "Build the first orchestration slice."
@@ -75,6 +78,16 @@ describe("SessionRunner", () => {
     expect(completedRun.status).toBe("completed");
     expect(completedRun.completedTaskIds).toHaveLength(4);
     expect(completedRun.outputIds).toHaveLength(4);
+
+    const events = await eventLogStore.list(run.id);
+    expect(events.some((event) => event.eventType === "provider.executed")).toBe(true);
+    expect(
+      events.some(
+        (event) =>
+          event.eventType === "provider.executed" &&
+          event.payload.contextPurpose === "planning"
+      )
+    ).toBe(true);
   });
 
   it("stops at the approval gate when the root task requires approval", async () => {

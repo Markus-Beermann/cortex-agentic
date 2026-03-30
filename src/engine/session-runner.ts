@@ -5,17 +5,19 @@ import type { ProviderPort } from "../adapters/providers/provider.port";
 import type {
   ApprovalRequest,
   Output,
+  ProviderResponse,
   RegistryEntry,
   RunState,
   Task
 } from "../core/contracts";
-import { validateOutput } from "../core/contracts";
+import { validateOutput, validateProviderResponse } from "../core/contracts";
 import type {
   ExecutionPolicy,
   PolicyDecision,
   PolicyDecisionStatus
 } from "../core/policies/execution-policy";
 import { routeOutputToHandoff, type RoutedHandoff } from "./handoff-router";
+import { buildProviderRequest } from "./provider-request";
 import { nowIso } from "../state/file-store";
 import { EventLogStore } from "../state/event-log.store";
 import { HandoffStore } from "../state/handoff.store";
@@ -177,14 +179,16 @@ export class SessionRunner {
     });
 
     const projectContext = await this.dependencies.projectAdapter.loadContext(run.projectId);
-    const output = validateOutput(
-      await this.dependencies.provider.execute({
-        projectContext,
-        run: runningRun,
-        task,
-        role: registryEntry
-      })
+    const providerRequest = buildProviderRequest({
+      providerId: this.dependencies.provider.id,
+      projectContext,
+      role: registryEntry,
+      task
+    });
+    const providerResponse: ProviderResponse = validateProviderResponse(
+      await this.dependencies.provider.execute(providerRequest)
     );
+    const output = validateOutput(providerResponse.output);
 
     const completedTask: Task = {
       ...task,
@@ -197,6 +201,16 @@ export class SessionRunner {
     await this.dependencies.eventLogStore.append(run.id, "task.completed", {
       taskId: task.id,
       outputId: output.id
+    });
+    await this.dependencies.eventLogStore.append(run.id, "provider.executed", {
+      providerId: providerResponse.providerId,
+      adapterVersion: providerResponse.adapterVersion,
+      model: providerResponse.model,
+      requestId: providerRequest.id,
+      taskId: task.id,
+      roleId: task.requestedRole,
+      contextPurpose: providerRequest.selectedContext.purpose,
+      diagnostics: providerResponse.diagnostics
     });
 
     let nextRun: RunState = {
