@@ -15,3 +15,4 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added a persona alias layer so humans can think in names while the core keeps stable technical role IDs.
 - Added registry inspection commands and git-aware project focus signals for future planning agents.
 - Added run/event inspection commands, role-specific context selection, and a provider adapter v1 envelope.
+- Added `run:list -- --status=waiting_approval` so human intervention points are visible without scanning every run.

@@ -58,6 +58,8 @@ npm run check
 
 `npm run run:list` shows known runs with status, queue counts, and approval state.
 
+`npm run run:list -- --status=waiting_approval` shows only runs that need human intervention right now.
+
 `npm run run:inspect -- <run-id>` shows a run together with tasks, outputs, handoffs, approvals, and event count.
 
 `npm run events:show -- <run-id> --limit=20` shows event log entries for a specific run.
