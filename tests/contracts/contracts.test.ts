@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TaskSchema, OutputSchema } from "../../src/core/contracts";
+import { OutputSchema, RegistryEntrySchema, TaskSchema } from "../../src/core/contracts";
 
 describe("contracts", () => {
   it("accepts a valid task contract", () => {
@@ -37,5 +37,20 @@ describe("contracts", () => {
 
     expect(result.success).toBe(false);
   });
-});
 
+  it("accepts a registry entry with stable role IDs and persona aliases", () => {
+    const result = RegistryEntrySchema.safeParse({
+      id: "role/coordinator",
+      roleId: "coordinator",
+      technicalName: "Coordinator",
+      personaName: "George",
+      aliases: ["George Senior"],
+      displayName: "George",
+      bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
+      capabilities: ["routing"],
+      allowedHandoffs: ["architect"]
+    });
+
+    expect(result.success).toBe(true);
+  });
+});

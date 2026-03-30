@@ -15,7 +15,13 @@ export class RegistryStore {
     const existing = await readJsonFileIfExists<RegistryEntry[]>(this.filePath);
 
     if (existing !== null) {
-      return existing.map(validateRegistryEntry);
+      try {
+        return existing.map(validateRegistryEntry);
+      } catch {
+        const validatedEntries = entries.map(validateRegistryEntry);
+        await writeJsonFile(this.filePath, validatedEntries);
+        return validatedEntries;
+      }
     }
 
     const validatedEntries = entries.map(validateRegistryEntry);
@@ -33,4 +39,3 @@ export class RegistryStore {
     return entries.find((entry) => entry.roleId === roleId) ?? null;
   }
 }
-

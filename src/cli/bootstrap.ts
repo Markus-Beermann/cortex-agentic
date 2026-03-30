@@ -12,7 +12,11 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         runtimePath: path.join(rootPath, ".orchestrator"),
-        seededRoles: entries.map((entry) => entry.roleId)
+        seededAgents: entries.map((entry) => ({
+          roleId: entry.roleId,
+          technicalName: entry.technicalName,
+          personaName: entry.personaName
+        }))
       },
       null,
       2
@@ -21,4 +25,3 @@ async function main(): Promise<void> {
 }
 
 void main();
-

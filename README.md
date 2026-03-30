@@ -16,7 +16,11 @@ George keeps a human owner in the loop. The human defines intent, reviews logic,
 
 George currently provides:
 
-- A role registry for `Coordinator`, `Architect`, `Implementer`, and `Reviewer`
+- A role registry with stable technical roles and human-friendly personas:
+  - `Coordinator` -> `George`
+  - `Architect` -> `Michael Angelo`
+  - `Implementer` -> `Tony`
+  - `Reviewer` -> `DINo`
 - Typed contracts for tasks, outputs, handoffs, registry entries, and run state
 - A file-backed state layer for registry, tasks, outputs, handoffs, run state, and event logs
 - A structured project context model for repository docs, stack detection, and git metadata
@@ -78,5 +82,6 @@ tests/
 - Keep the core project-agnostic
 - Keep governance rules separate from operational bootstraps
 - Keep a human owner in the decision loop for approval-sensitive work
+- Keep technical role IDs stable and treat persona names as a separate alias layer
 - Start with semi-automatic orchestration, not mythology
 - Add providers and project adapters without changing core contracts

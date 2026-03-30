@@ -27,6 +27,7 @@ George coordinates specialized agents across projects through explicit contracts
 - Every task uses an explicit task contract
 - Every agent result uses an explicit output contract
 - Every role transition uses an explicit handoff contract
+- Technical role IDs remain stable even when persona names change
 - Approval requests must become explicit runtime artifacts
 - Runs stop when policy says `needs-approval` or `blocked`
 - New adapters extend the core through ports, not through shortcuts

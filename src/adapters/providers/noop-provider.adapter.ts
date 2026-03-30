@@ -19,6 +19,7 @@ export class NoopProviderAdapter implements ProviderPort {
   public async execute(context: ProviderExecutionContext): Promise<Output> {
     const timestamp = nowIso();
     const task = context.task;
+    const personaName = context.role.personaName;
     const projectContext = context.projectContext;
     const stackSummary = projectContext.stack.languages.join(", ") || "unknown stack";
 
@@ -28,7 +29,7 @@ export class NoopProviderAdapter implements ProviderPort {
           id: randomUUID(),
           taskId: task.id,
           roleId: "coordinator",
-          summary: `Coordinator classified the goal "${task.objective}" and routed planning work.`,
+          summary: `${personaName} classified the goal "${task.objective}" and routed planning work.`,
           decisions: [
             "Start with explicit contracts.",
             `Route detailed planning to the architect role for a project using ${stackSummary}.`
@@ -57,7 +58,7 @@ export class NoopProviderAdapter implements ProviderPort {
           id: randomUUID(),
           taskId: task.id,
           roleId: "architect",
-          summary: "Architect translated the goal into a first implementation slice.",
+          summary: `${personaName} translated the goal into a first implementation slice.`,
           decisions: [
             "Build contracts first.",
             `Use the structured project context from ${projectContext.rootPath}.`
@@ -91,7 +92,7 @@ export class NoopProviderAdapter implements ProviderPort {
           id: randomUUID(),
           taskId: task.id,
           roleId: "implementer",
-          summary: "Implementer completed the bounded execution slice.",
+          summary: `${personaName} completed the bounded execution slice.`,
           decisions: [
             "File-backed state is sufficient for Phase 1.",
             `Project documents available: ${projectContext.documents.length}.`
@@ -125,7 +126,7 @@ export class NoopProviderAdapter implements ProviderPort {
           id: randomUUID(),
           taskId: task.id,
           roleId: "reviewer",
-          summary: "Reviewer accepted the implementation slice and closed the run.",
+          summary: `${personaName} accepted the implementation slice and closed the run.`,
           decisions: [
             "Core contracts are explicit.",
             "The first deterministic loop is suitable for further extension."

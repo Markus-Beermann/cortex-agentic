@@ -19,6 +19,8 @@ The system is designed to coordinate tasks across projects without baking a sing
 
 These contracts define the durable language of the orchestrator.
 
+The core role contract separates stable `roleId` values from persona-facing names. `Coordinator` does not stop being `coordinator` just because humans prefer to think in names like `George`.
+
 ### Orchestration Engine
 
 - Run initialization
