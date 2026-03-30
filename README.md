@@ -28,6 +28,7 @@ George currently provides:
 - A reusable orchestration loop with policy gates
 - A `noop` provider for deterministic dry runs
 - Provider adapter v1 request/response envelopes
+- An Anthropic provider adapter with bootstrap-aware prompt building
 - Pending approval requests with explicit approve, reject, and resume commands
 - Governance rules kept separate from role-specific bootstraps
 
@@ -65,6 +66,8 @@ npm run check
 `npm run events:show -- <run-id> --limit=20` shows event log entries for a specific run.
 
 `npm run dry-run` executes a deterministic orchestration pass using the built-in `noop` provider and writes run artifacts into `.orchestrator/`.
+
+`ANTHROPIC_API_KEY=... npm run dry-run -- --provider=anthropic` executes the same orchestration loop with the Anthropic provider against `claude-sonnet-4-6`.
 
 `npm run dry-run -- --root-approval` forces a human approval gate before the first task executes.
 

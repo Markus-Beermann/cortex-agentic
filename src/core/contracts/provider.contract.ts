@@ -1,10 +1,35 @@
 import { z } from "zod";
 
+import { ApprovalModeSchema } from "./shared.contract";
 import { ContextSelectionSchema } from "./context-selection.contract";
 import { OutputSchema } from "./output.contract";
 import { ProjectContextSchema } from "./project-context.contract";
-import { IdentifierSchema, RoleIdSchema, TimestampSchema } from "./shared.contract";
+import {
+  IdentifierSchema,
+  RoleIdSchema,
+  TimestampSchema
+} from "./shared.contract";
+import { RunStatusSchema } from "./run-state.contract";
 import { TaskSchema } from "./task.contract";
+
+export const CompletedWorkItemSchema = z.object({
+  taskId: IdentifierSchema,
+  roleId: RoleIdSchema,
+  title: z.string().min(1),
+  objective: z.string().min(1),
+  outputSummary: z.string().min(1),
+  nextActionKind: z.enum(["complete", "handoff"])
+});
+
+export const RunProgressSchema = z.object({
+  status: RunStatusSchema,
+  activeTaskId: IdentifierSchema.nullable(),
+  pendingApprovalIds: z.array(IdentifierSchema).default([]),
+  queuedTaskIds: z.array(IdentifierSchema).default([]),
+  completedTaskIds: z.array(IdentifierSchema).default([]),
+  outputIds: z.array(IdentifierSchema).default([]),
+  completedWork: z.array(CompletedWorkItemSchema).default([])
+});
 
 export const ProviderRequestSchema = z.object({
   id: IdentifierSchema,
@@ -14,8 +39,14 @@ export const ProviderRequestSchema = z.object({
   roleId: RoleIdSchema,
   technicalName: z.string().min(1),
   personaName: z.string().min(1),
+  displayName: z.string().min(1),
+  bootstrapPath: z.string().min(1),
+  capabilities: z.array(z.string()).default([]),
+  allowedHandoffs: z.array(RoleIdSchema).default([]),
   projectContext: ProjectContextSchema,
   selectedContext: ContextSelectionSchema,
+  handoffApprovalMode: ApprovalModeSchema,
+  runProgress: RunProgressSchema,
   task: TaskSchema,
   createdAt: TimestampSchema
 });
@@ -30,6 +61,8 @@ export const ProviderResponseSchema = z.object({
 
 export type ProviderRequest = z.infer<typeof ProviderRequestSchema>;
 export type ProviderResponse = z.infer<typeof ProviderResponseSchema>;
+export type CompletedWorkItem = z.infer<typeof CompletedWorkItemSchema>;
+export type RunProgress = z.infer<typeof RunProgressSchema>;
 
 export function validateProviderRequest(value: unknown): ProviderRequest {
   return ProviderRequestSchema.parse(value);
@@ -38,4 +71,3 @@ export function validateProviderRequest(value: unknown): ProviderRequest {
 export function validateProviderResponse(value: unknown): ProviderResponse {
   return ProviderResponseSchema.parse(value);
 }
-

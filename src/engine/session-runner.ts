@@ -4,6 +4,7 @@ import type { ProjectAdapterPort } from "../adapters/projects/project-adapter.po
 import type { ProviderPort } from "../adapters/providers/provider.port";
 import type {
   ApprovalRequest,
+  ApprovalMode,
   Output,
   ProviderResponse,
   RegistryEntry,
@@ -38,6 +39,7 @@ export interface SessionRunnerDependencies {
   approvalRequestStore: ApprovalRequestStore;
   runStateStore: RunStateStore;
   eventLogStore: EventLogStore;
+  handoffApprovalModeByRole?: Partial<Record<Task["requestedRole"], ApprovalMode>>;
 }
 
 export interface InitializeRunInput {
@@ -179,16 +181,29 @@ export class SessionRunner {
     });
 
     const projectContext = await this.dependencies.projectAdapter.loadContext(run.projectId);
+    const completedTasks = await Promise.all(
+      run.completedTaskIds.map((completedTaskId) =>
+        this.dependencies.taskStore.get(completedTaskId)
+      )
+    );
+    const completedOutputs = await this.dependencies.outputStore.getMany(run.outputIds);
     const providerRequest = buildProviderRequest({
       providerId: this.dependencies.provider.id,
       projectContext,
       role: registryEntry,
-      task
+      run: runningRun,
+      task,
+      completedTasks,
+      completedOutputs,
+      handoffApprovalMode: this.resolveHandoffApprovalMode(task.requestedRole)
     });
     const providerResponse: ProviderResponse = validateProviderResponse(
       await this.dependencies.provider.execute(providerRequest)
     );
-    const output = validateOutput(providerResponse.output);
+    const output = this.applyHandoffApprovalModeOverride(
+      validateOutput(providerResponse.output),
+      task.requestedRole
+    );
 
     const completedTask: Task = {
       ...task,
@@ -551,5 +566,26 @@ export class SessionRunner {
     };
 
     return this.dependencies.approvalRequestStore.save(approvalRequest);
+  }
+
+  private resolveHandoffApprovalMode(roleId: Task["requestedRole"]): ApprovalMode {
+    return this.dependencies.handoffApprovalModeByRole?.[roleId] ?? "auto";
+  }
+
+  private applyHandoffApprovalModeOverride(
+    output: Output,
+    roleId: Task["requestedRole"]
+  ): Output {
+    if (output.nextAction.kind !== "handoff") {
+      return output;
+    }
+
+    return {
+      ...output,
+      nextAction: {
+        ...output.nextAction,
+        approvalMode: this.resolveHandoffApprovalMode(roleId)
+      }
+    };
   }
 }

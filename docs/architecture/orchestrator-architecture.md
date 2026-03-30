@@ -33,7 +33,19 @@ The core role contract separates stable `roleId` values from persona-facing name
 
 Providers implement a common execution port. Provider adapter v1 accepts a structured provider request and returns a provider response envelope with diagnostics plus the output contract.
 
-Phase 1 still ships only a deterministic `noop` adapter for dry runs and contract tests, but it now speaks the same v1 provider language future adapters will use.
+Phase 1 ships two provider adapters:
+
+- `noop` for deterministic dry runs and contract tests
+- `anthropic` for real execution against Claude
+
+Both speak the same v1 provider language. The Anthropic adapter builds prompts from:
+
+- the role bootstrap file referenced by the registry entry
+- the current task contract
+- the selected project context for the active role
+- a run-progress snapshot of already completed work
+
+The provider adapter is responsible for returning a validated output contract, not a vaguely inspirational paragraph pretending to be one.
 
 ### Project Adapters
 

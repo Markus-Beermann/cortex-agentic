@@ -1,18 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-  ApprovalMode,
-  Output,
-  ProviderRequest,
-  ProviderResponse,
-  RoleId,
-  Task
-} from "../../core/contracts";
+import type { ApprovalMode, Output, ProviderRequest, ProviderResponse, Task } from "../../core/contracts";
 import type { ProviderPort } from "./provider.port";
-
-export interface NoopProviderOptions {
-  handoffApprovalModeByRole?: Partial<Record<RoleId, ApprovalMode>>;
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -21,8 +10,6 @@ function nowIso(): string {
 export class NoopProviderAdapter implements ProviderPort {
   public readonly id = "noop";
   public readonly version = "v1" as const;
-
-  public constructor(private readonly options: NoopProviderOptions = {}) {}
 
   public async execute(request: ProviderRequest): Promise<ProviderResponse> {
     const timestamp = nowIso();
@@ -35,7 +22,15 @@ export class NoopProviderAdapter implements ProviderPort {
       selectedContext.focusPaths.length > 0
         ? selectedContext.focusPaths.slice(0, 3).join(", ")
         : "no focused paths";
-    const output = this.buildOutput(task, personaName, projectContext, stackSummary, focusSummary, timestamp);
+    const output = this.buildOutput(
+      task,
+      personaName,
+      projectContext,
+      stackSummary,
+      focusSummary,
+      request.handoffApprovalMode,
+      timestamp
+    );
 
     return {
       providerId: this.id,
@@ -55,6 +50,7 @@ export class NoopProviderAdapter implements ProviderPort {
     projectContext: ProviderRequest["projectContext"],
     stackSummary: string,
     focusSummary: string,
+    handoffApprovalMode: ApprovalMode,
     timestamp: string
   ): Output {
     switch (task.requestedRole) {
@@ -83,7 +79,7 @@ export class NoopProviderAdapter implements ProviderPort {
               "Governance and operational bootstraps must remain separate."
             ],
             "Architect must turn the goal into execution-ready work.",
-            this.resolveHandoffApprovalMode("coordinator")
+            handoffApprovalMode
           ),
           createdAt: timestamp
         };
@@ -118,7 +114,7 @@ export class NoopProviderAdapter implements ProviderPort {
               "Do not add provider-specific logic to the core."
             ],
             "Implementation can now proceed on bounded scope.",
-            this.resolveHandoffApprovalMode("architect")
+            handoffApprovalMode
           ),
           createdAt: timestamp
         };
@@ -153,7 +149,7 @@ export class NoopProviderAdapter implements ProviderPort {
               "Do not widen scope during review."
             ],
             "Review is required before closing the run.",
-            this.resolveHandoffApprovalMode("implementer")
+            handoffApprovalMode
           ),
           createdAt: timestamp
         };
@@ -201,9 +197,5 @@ export class NoopProviderAdapter implements ProviderPort {
       rationale,
       approvalMode
     };
-  }
-
-  private resolveHandoffApprovalMode(roleId: RoleId): ApprovalMode {
-    return this.options.handoffApprovalModeByRole?.[roleId] ?? "auto";
   }
 }

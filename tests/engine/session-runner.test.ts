@@ -5,10 +5,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FilesystemProjectAdapter } from "../../src/adapters/projects/filesystem-project.adapter";
-import {
-  NoopProviderAdapter,
-  type NoopProviderOptions
-} from "../../src/adapters/providers/noop-provider.adapter";
+import { NoopProviderAdapter } from "../../src/adapters/providers/noop-provider.adapter";
+import type { ApprovalMode, RoleId } from "../../src/core/contracts";
 import { DefaultExecutionPolicy } from "../../src/core/policies/execution-policy";
 import { SessionRunner } from "../../src/engine/session-runner";
 import { createDefaultRegistry } from "../../src/state/default-registry";
@@ -25,7 +23,7 @@ const temporaryDirectories: string[] = [];
 async function createRunner(
   rootPath: string,
   options: {
-    providerOptions?: NoopProviderOptions;
+    handoffApprovalModeByRole?: Partial<Record<RoleId, ApprovalMode>>;
   } = {}
 ): Promise<{
   runner: SessionRunner;
@@ -42,7 +40,7 @@ async function createRunner(
     approvalRequestStore,
     eventLogStore,
     runner: new SessionRunner({
-      provider: new NoopProviderAdapter(options.providerOptions),
+      provider: new NoopProviderAdapter(),
       projectAdapter: new FilesystemProjectAdapter(rootPath),
       policy: new DefaultExecutionPolicy(),
       registryStore,
@@ -51,7 +49,8 @@ async function createRunner(
       handoffStore: new HandoffStore(rootPath),
       approvalRequestStore,
       runStateStore: new RunStateStore(rootPath),
-      eventLogStore
+      eventLogStore,
+      handoffApprovalModeByRole: options.handoffApprovalModeByRole
     })
   };
 }
@@ -168,10 +167,8 @@ describe("SessionRunner", () => {
     temporaryDirectories.push(rootPath);
 
     const { runner, approvalRequestStore } = await createRunner(rootPath, {
-      providerOptions: {
-        handoffApprovalModeByRole: {
-          coordinator: "needs-approval"
-        }
+      handoffApprovalModeByRole: {
+        coordinator: "needs-approval"
       }
     });
 

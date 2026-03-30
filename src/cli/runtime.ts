@@ -1,8 +1,8 @@
 import { FilesystemProjectAdapter } from "../adapters/projects/filesystem-project.adapter";
-import {
-  NoopProviderAdapter,
-  type NoopProviderOptions
-} from "../adapters/providers/noop-provider.adapter";
+import { AnthropicProviderAdapter } from "../adapters/providers/anthropic-provider.adapter";
+import { NoopProviderAdapter } from "../adapters/providers/noop-provider.adapter";
+import type { ProviderPort } from "../adapters/providers/provider.port";
+import type { ApprovalMode, RoleId } from "../core/contracts";
 import { DefaultExecutionPolicy } from "../core/policies/execution-policy";
 import { SessionRunner } from "../engine/session-runner";
 import { createDefaultRegistry } from "../state/default-registry";
@@ -25,15 +25,20 @@ export interface CliRuntime {
   eventLogStore: EventLogStore;
 }
 
+export type CliProviderId = "noop" | "anthropic";
+
+interface CliRuntimeOptions {
+  providerId?: CliProviderId;
+  handoffApprovalModeByRole?: Partial<Record<RoleId, ApprovalMode>>;
+}
+
 export async function createCliSessionRunner(rootPath: string): Promise<CliRuntime> {
   return createCliSessionRunnerWithOptions(rootPath, {});
 }
 
 export async function createCliSessionRunnerWithOptions(
   rootPath: string,
-  options: {
-    providerOptions?: NoopProviderOptions;
-  }
+  options: CliRuntimeOptions
 ): Promise<CliRuntime> {
   const registryStore = new RegistryStore(rootPath);
   await registryStore.seed(createDefaultRegistry());
@@ -44,9 +49,10 @@ export async function createCliSessionRunnerWithOptions(
   const handoffStore = new HandoffStore(rootPath);
   const runStateStore = new RunStateStore(rootPath);
   const eventLogStore = new EventLogStore(rootPath);
+  const provider = createProvider(rootPath, options.providerId ?? "noop");
 
   const runner = new SessionRunner({
-    provider: new NoopProviderAdapter(options.providerOptions),
+    provider,
     projectAdapter: new FilesystemProjectAdapter(rootPath),
     policy: new DefaultExecutionPolicy(),
     registryStore,
@@ -55,7 +61,8 @@ export async function createCliSessionRunnerWithOptions(
     handoffStore,
     approvalRequestStore,
     runStateStore,
-    eventLogStore
+    eventLogStore,
+    handoffApprovalModeByRole: options.handoffApprovalModeByRole
   });
 
   return {
@@ -68,4 +75,13 @@ export async function createCliSessionRunnerWithOptions(
     runStateStore,
     eventLogStore
   };
+}
+
+function createProvider(rootPath: string, providerId: CliProviderId): ProviderPort {
+  switch (providerId) {
+    case "noop":
+      return new NoopProviderAdapter();
+    case "anthropic":
+      return new AnthropicProviderAdapter(rootPath);
+  }
 }
