@@ -38,4 +38,28 @@ export class RegistryStore {
     const entries = await this.list();
     return entries.find((entry) => entry.roleId === roleId) ?? null;
   }
+
+  public async resolve(query: string): Promise<RegistryEntry | null> {
+    const entries = await this.list();
+    const normalizedQuery = this.normalize(query);
+
+    return (
+      entries.find((entry) => {
+        const candidates = [
+          entry.id,
+          entry.roleId,
+          entry.technicalName,
+          entry.personaName,
+          entry.displayName,
+          ...entry.aliases
+        ];
+
+        return candidates.some((candidate) => this.normalize(candidate) === normalizedQuery);
+      }) ?? null
+    );
+  }
+
+  private normalize(value: string): string {
+    return value.trim().toLowerCase();
+  }
 }

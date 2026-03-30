@@ -40,8 +40,10 @@ Project adapters load structured repository context and expose it to the orchest
 Phase 1 project context includes:
 
 - repository metadata
+- changed and untracked git file signals
 - detected stack and manifests
 - governance, bootstrap, architecture, and log documents
+- focus paths for the next planning or implementation step
 - runtime path hints
 
 ### State and Logs

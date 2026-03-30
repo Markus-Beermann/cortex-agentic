@@ -22,6 +22,10 @@ export class NoopProviderAdapter implements ProviderPort {
     const personaName = context.role.personaName;
     const projectContext = context.projectContext;
     const stackSummary = projectContext.stack.languages.join(", ") || "unknown stack";
+    const focusSummary =
+      projectContext.focusPaths.length > 0
+        ? projectContext.focusPaths.slice(0, 3).join(", ")
+        : "no focused paths";
 
     switch (task.requestedRole) {
       case "coordinator":
@@ -61,7 +65,8 @@ export class NoopProviderAdapter implements ProviderPort {
           summary: `${personaName} translated the goal into a first implementation slice.`,
           decisions: [
             "Build contracts first.",
-            `Use the structured project context from ${projectContext.rootPath}.`
+            `Use the structured project context from ${projectContext.rootPath}.`,
+            `Prioritize focus paths: ${focusSummary}.`
           ],
           blockers: [],
           artifacts: [
@@ -95,7 +100,8 @@ export class NoopProviderAdapter implements ProviderPort {
           summary: `${personaName} completed the bounded execution slice.`,
           decisions: [
             "File-backed state is sufficient for Phase 1.",
-            `Project documents available: ${projectContext.documents.length}.`
+            `Project documents available: ${projectContext.documents.length}.`,
+            `Repository dirty state: ${projectContext.repository.isDirty}.`
           ],
           blockers: [],
           artifacts: [

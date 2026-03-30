@@ -23,7 +23,7 @@ George currently provides:
   - `Reviewer` -> `DINo`
 - Typed contracts for tasks, outputs, handoffs, registry entries, and run state
 - A file-backed state layer for registry, tasks, outputs, handoffs, run state, and event logs
-- A structured project context model for repository docs, stack detection, and git metadata
+- A structured project context model for repository docs, stack detection, git metadata, and focused changed-file signals
 - A reusable orchestration loop with policy gates
 - A `noop` provider for deterministic dry runs
 - Pending approval requests with explicit approve, reject, and resume commands
@@ -41,12 +41,17 @@ George does not yet provide:
 ```bash
 npm install
 npm run bootstrap
+npm run registry:list
 npm run dry-run
 npm run approvals:list
 npm run check
 ```
 
 `npm run bootstrap` seeds the local runtime registry in `.orchestrator/`.
+
+`npm run registry:list` shows the registered agents with technical role IDs and human personas.
+
+`npm run registry:inspect -- George` resolves a specific agent by role ID, technical name, persona name, or alias.
 
 `npm run dry-run` executes a deterministic orchestration pass using the built-in `noop` provider and writes run artifacts into `.orchestrator/`.
 

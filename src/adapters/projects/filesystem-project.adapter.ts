@@ -1,25 +1,31 @@
-import { access, readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import type { ProjectContext, ProjectDocument } from "../../core/contracts";
 import { validateProjectContext } from "../../core/contracts";
 import type { ProjectAdapterPort } from "./project-adapter.port";
 
+const execFileAsync = promisify(execFile);
+
 export class FilesystemProjectAdapter implements ProjectAdapterPort {
   public constructor(private readonly rootPath: string) {}
 
   public async loadContext(projectId: string): Promise<ProjectContext> {
+    const documents = await this.collectDocuments();
+    const repository = await this.collectRepositoryInfo();
+    const stack = await this.collectStackInfo();
+
     return validateProjectContext({
       projectId,
       rootPath: this.rootPath,
       runtimePath: path.join(this.rootPath, ".orchestrator"),
-      documents: await this.collectDocuments(),
-      repository: await this.collectRepositoryInfo(),
-      stack: await this.collectStackInfo(),
-      notes: [
-        "Human approval is treated as a runtime concern.",
-        "Governance and bootstrap context stay separate."
-      ]
+      documents,
+      repository,
+      stack,
+      focusPaths: this.buildFocusPaths(documents, stack, repository),
+      notes: this.buildNotes(repository)
     });
   }
 
@@ -56,35 +62,48 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
   }
 
   private async collectRepositoryInfo(): Promise<ProjectContext["repository"]> {
-    const gitDirectory = path.join(this.rootPath, ".git");
-    const headPath = path.join(gitDirectory, "HEAD");
-    const configPath = path.join(gitDirectory, "config");
+    const isGitRepo = (await this.runGit(["rev-parse", "--is-inside-work-tree"])) === "true";
 
-    if (!(await this.exists(headPath))) {
+    if (!isGitRepo) {
       return {
         isGitRepo: false,
         currentBranch: null,
-        remotes: []
+        remotes: [],
+        isDirty: false,
+        changedFiles: [],
+        untrackedFiles: []
       };
     }
 
-    const headContent = await readFile(headPath, "utf8");
-    const currentBranch = headContent.startsWith("ref:")
-      ? headContent.trim().split("/").at(-1) ?? null
-      : null;
-
-    const remotes =
-      (await this.exists(configPath))
-        ? Array.from(
-            (await readFile(configPath, "utf8")).matchAll(/\[remote "([^"]+)"\]/gu),
-            (match) => match[1]
-          )
-        : [];
+    const currentBranch = (await this.runGit(["branch", "--show-current"])) || null;
+    const remotesOutput = await this.runGit(["remote"]);
+    const statusOutput = await this.runGit([
+      "status",
+      "--short",
+      "--untracked-files=all"
+    ]);
+    const statusEntries = (statusOutput || "")
+      .split("\n")
+      .map((line) => line.trimEnd())
+      .filter((line) => line.length > 0);
+    const remotes = (remotesOutput || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const untrackedFiles = statusEntries
+      .filter((entry) => entry.startsWith("?? "))
+      .map((entry) => this.parseStatusPath(entry));
+    const changedFiles = statusEntries
+      .filter((entry) => !entry.startsWith("?? "))
+      .map((entry) => this.parseStatusPath(entry));
 
     return {
       isGitRepo: true,
       currentBranch,
-      remotes
+      remotes,
+      isDirty: statusEntries.length > 0,
+      changedFiles: this.unique(changedFiles),
+      untrackedFiles: this.unique(untrackedFiles)
     };
   }
 
@@ -177,5 +196,75 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     }
 
     return Array.from(languages);
+  }
+
+  private buildFocusPaths(
+    documents: ProjectDocument[],
+    stack: ProjectContext["stack"],
+    repository: ProjectContext["repository"]
+  ): string[] {
+    const dynamicFocusPaths = [...repository.changedFiles, ...repository.untrackedFiles];
+
+    if (dynamicFocusPaths.length > 0) {
+      return this.unique(dynamicFocusPaths).slice(0, 12);
+    }
+
+    const fallbackFocusPaths = [
+      ...documents
+        .filter((document) =>
+          ["governance", "bootstrap", "architecture", "manifest"].includes(document.kind)
+        )
+        .map((document) => document.path),
+      ...stack.configs
+    ];
+
+    return this.unique(fallbackFocusPaths).slice(0, 12);
+  }
+
+  private buildNotes(repository: ProjectContext["repository"]): string[] {
+    const notes = [
+      "Human approval is treated as a runtime concern.",
+      "Governance and bootstrap context stay separate."
+    ];
+
+    if (repository.isGitRepo) {
+      if (repository.isDirty) {
+        notes.push(
+          `Repository has ${repository.changedFiles.length} changed and ${repository.untrackedFiles.length} untracked files.`
+        );
+      } else {
+        notes.push("Repository working tree is clean.");
+      }
+    } else {
+      notes.push("Project context was loaded outside a git repository.");
+    }
+
+    return notes;
+  }
+
+  private parseStatusPath(entry: string): string {
+    const rawPath = entry.slice(3).trim();
+
+    if (rawPath.includes(" -> ")) {
+      return rawPath.split(" -> ").at(-1) || rawPath;
+    }
+
+    return rawPath;
+  }
+
+  private unique(values: string[]): string[] {
+    return Array.from(new Set(values.filter((value) => value.length > 0)));
+  }
+
+  private async runGit(args: string[]): Promise<string | null> {
+    try {
+      const { stdout } = await execFileAsync("git", args, {
+        cwd: this.rootPath
+      });
+
+      return stdout.trimEnd();
+    } catch {
+      return null;
+    }
   }
 }

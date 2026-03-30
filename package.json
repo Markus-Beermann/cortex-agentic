@@ -5,6 +5,8 @@
   "description": "Reusable multi-agent orchestration core for private project automation.",
   "scripts": {
     "bootstrap": "tsx src/cli/bootstrap.ts",
+    "registry:list": "tsx src/cli/registry-list.ts",
+    "registry:inspect": "tsx src/cli/registry-inspect.ts",
     "dry-run": "tsx src/cli/dry-run.ts",
     "approvals:list": "tsx src/cli/list-approvals.ts",
     "approve": "tsx src/cli/approve.ts",

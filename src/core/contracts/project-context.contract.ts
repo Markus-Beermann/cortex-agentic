@@ -19,7 +19,10 @@ export const ProjectDocumentSchema = z.object({
 export const ProjectRepositorySchema = z.object({
   isGitRepo: z.boolean(),
   currentBranch: z.string().min(1).nullable(),
-  remotes: z.array(z.string()).default([])
+  remotes: z.array(z.string()).default([]),
+  isDirty: z.boolean(),
+  changedFiles: z.array(z.string()).default([]),
+  untrackedFiles: z.array(z.string()).default([])
 });
 
 export const ProjectStackSchema = z.object({
@@ -36,6 +39,7 @@ export const ProjectContextSchema = z.object({
   documents: z.array(ProjectDocumentSchema).default([]),
   repository: ProjectRepositorySchema,
   stack: ProjectStackSchema,
+  focusPaths: z.array(z.string()).default([]),
   notes: z.array(z.string()).default([])
 });
 
@@ -48,4 +52,3 @@ export type ProjectContext = z.infer<typeof ProjectContextSchema>;
 export function validateProjectContext(value: unknown): ProjectContext {
   return ProjectContextSchema.parse(value);
 }
-

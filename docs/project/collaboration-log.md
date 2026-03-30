@@ -13,3 +13,4 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added explicit approval-request state and human approval/resume CLI flow.
 - Expanded the project adapter to expose structured repository context to providers and the orchestration engine.
 - Added a persona alias layer so humans can think in names while the core keeps stable technical role IDs.
+- Added registry inspection commands and git-aware project focus signals for future planning agents.
