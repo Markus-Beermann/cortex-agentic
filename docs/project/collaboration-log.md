@@ -21,3 +21,13 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added a bounded Anthropic self-correction retry when the first tool payload misses required contract fields.
 - Split Anthropic recovery into a targeted `nextAction` repair path instead of rerolling the full output draft.
 - Normalized PostgreSQL `run_events.timestamp` values before contract validation so Railway event reads no longer fail on `Date` serialization.
+
+## 2026-04-01
+
+- Renamed repository from `George` to `cortex-agentic` — system identity now reflects the full multi-agent scope.
+- Added Express State-Server (`src/server/`) with PostgreSQL dual-write: runs and events persist to both `.orchestrator/` and Railway PostgreSQL simultaneously.
+- Deployed State-Server to Railway with PostgreSQL plugin; confirmed remote API returns live run data.
+- Added `apps/dashboard/` — standalone Next.js frontend built by Tony with run list, run detail, Mermaid handoff graph, and events timeline.
+- Deployed dashboard to Vercel; live at `cortex-agentic-git-main-markus-beermanns-projects.vercel.app`.
+- Added agent thread bootstrap prompts for Tony and Sigmund under `docs/agent-context/`.
+- First milestone where Markus can see live orchestration runs in a browser without terminal access.
