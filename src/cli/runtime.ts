@@ -5,6 +5,8 @@ import type { ProviderPort } from "../adapters/providers/provider.port";
 import type { ApprovalMode, RoleId } from "../core/contracts";
 import { DefaultExecutionPolicy } from "../core/policies/execution-policy";
 import { SessionRunner } from "../engine/session-runner";
+import { getPool } from "../server/db";
+import { DualWriteEventLogStore, DualWriteRunStateStore } from "../server/dual-write-stores";
 import { createDefaultRegistry } from "../state/default-registry";
 import { ApprovalRequestStore } from "../state/approval-request.store";
 import { EventLogStore } from "../state/event-log.store";
@@ -47,8 +49,12 @@ export async function createCliSessionRunnerWithOptions(
   const taskStore = new TaskStore(rootPath);
   const outputStore = new OutputStore(rootPath);
   const handoffStore = new HandoffStore(rootPath);
-  const runStateStore = new RunStateStore(rootPath);
-  const eventLogStore = new EventLogStore(rootPath);
+  const runStateStore = process.env.DATABASE_URL
+    ? new DualWriteRunStateStore(rootPath, getPool())
+    : new RunStateStore(rootPath);
+  const eventLogStore = process.env.DATABASE_URL
+    ? new DualWriteEventLogStore(rootPath, getPool())
+    : new EventLogStore(rootPath);
   const provider = createProvider(rootPath, options.providerId ?? "noop");
 
   const runner = new SessionRunner({
