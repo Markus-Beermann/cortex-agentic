@@ -8,7 +8,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Cortex Dashboard",
-  description: "Run monitoring dashboard for the Cortex Agentic System."
+  description: "Run monitoring dashboard for the Cortex Agentic System.",
+  appleWebApp: {
+    capable: true,
+    title: "Cortex",
+    statusBarStyle: "black-translucent"
+  }
 };
 
 export const viewport: Viewport = {
