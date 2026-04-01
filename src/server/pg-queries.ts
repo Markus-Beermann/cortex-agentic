@@ -3,6 +3,18 @@ import type { Pool } from "pg";
 import type { RunEvent, RunState } from "../core/contracts";
 import { validateRunEvent, validateRunState } from "../core/contracts";
 
+function normalizeEventTimestamp(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  throw new Error(`Unsupported run event timestamp value: ${String(value)}`);
+}
+
 export async function pgListRuns(pool: Pool): Promise<RunState[]> {
   const result = await pool.query<{ data: unknown }>(
     `SELECT data FROM runs ORDER BY updated_at DESC`
@@ -24,7 +36,7 @@ export async function pgListEvents(pool: Pool, runId: string): Promise<RunEvent[
     id: string;
     run_id: string;
     event_type: string;
-    timestamp: string;
+    timestamp: string | Date;
     payload: unknown;
   }>(
     `SELECT id, run_id, event_type, timestamp, payload
@@ -38,8 +50,10 @@ export async function pgListEvents(pool: Pool, runId: string): Promise<RunEvent[
       id: row.id,
       runId: row.run_id,
       eventType: row.event_type,
-      timestamp: row.timestamp,
+      timestamp: normalizeEventTimestamp(row.timestamp),
       payload: row.payload as Record<string, unknown>
     })
   );
 }
+
+export { normalizeEventTimestamp };

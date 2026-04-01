@@ -20,3 +20,4 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Replaced free-form Anthropic JSON parsing with Zod-derived tool schemas so structured output is contract-led instead of luck-led.
 - Added a bounded Anthropic self-correction retry when the first tool payload misses required contract fields.
 - Split Anthropic recovery into a targeted `nextAction` repair path instead of rerolling the full output draft.
+- Normalized PostgreSQL `run_events.timestamp` values before contract validation so Railway event reads no longer fail on `Date` serialization.
