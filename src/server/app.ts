@@ -6,7 +6,12 @@ import { getPool } from "./db";
 import { pgGetRunState, pgListEvents, pgListRuns } from "./pg-queries";
 
 const ROOT_PATH = process.env.ORCHESTRATOR_ROOT ?? process.cwd();
-const useDb = Boolean(process.env.DATABASE_URL);
+const DATABASE_URL = process.env.DATABASE_URL;
+const useDb = Boolean(DATABASE_URL);
+
+if (!useDb) {
+  console.warn("[server] WARNING: DATABASE_URL not set, using filesystem fallback");
+}
 
 const runStore = new RunStateStore(ROOT_PATH);
 const eventStore = new EventLogStore(ROOT_PATH);

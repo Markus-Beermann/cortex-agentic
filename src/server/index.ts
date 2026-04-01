@@ -8,7 +8,9 @@ const PORT = Number(process.env.PORT ?? 3000);
 async function main(): Promise<void> {
   if (process.env.DATABASE_URL) {
     await initSchema();
-    console.log("[server] schema ready");
+    console.log("[server] backend: postgres");
+  } else {
+    console.log("[server] backend: filesystem (DATABASE_URL not set)");
   }
 
   app.listen(PORT, () => {
