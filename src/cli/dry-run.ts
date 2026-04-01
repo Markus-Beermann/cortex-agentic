@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 import path from "node:path";
 
 import { OrchestrationLoop } from "../engine/orchestration-loop";
