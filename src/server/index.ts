@@ -6,11 +6,11 @@ import { initSchema } from "./db";
 const PORT = Number(process.env.PORT ?? 3000);
 
 async function main(): Promise<void> {
-  if (process.env.DATABASE_URL) {
+  if (process.env.DATABASE_PUBLIC_URL) {
     await initSchema();
     console.log("[server] backend: postgres");
   } else {
-    console.log("[server] backend: filesystem (DATABASE_URL not set)");
+    console.log("[server] backend: filesystem (DATABASE_PUBLIC_URL not set)");
   }
 
   app.listen(PORT, () => {

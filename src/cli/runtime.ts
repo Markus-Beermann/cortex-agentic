@@ -49,10 +49,10 @@ export async function createCliSessionRunnerWithOptions(
   const taskStore = new TaskStore(rootPath);
   const outputStore = new OutputStore(rootPath);
   const handoffStore = new HandoffStore(rootPath);
-  const runStateStore = process.env.DATABASE_URL
+  const runStateStore = process.env.DATABASE_PUBLIC_URL
     ? new DualWriteRunStateStore(rootPath, getPool())
     : new RunStateStore(rootPath);
-  const eventLogStore = process.env.DATABASE_URL
+  const eventLogStore = process.env.DATABASE_PUBLIC_URL
     ? new DualWriteEventLogStore(rootPath, getPool())
     : new EventLogStore(rootPath);
   const provider = createProvider(rootPath, options.providerId ?? "noop");
