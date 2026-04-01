@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useEffect, useEffectEvent, useState } from "react";
+import { startTransition, useCallback, useEffect, useEffectEvent, useState } from "react";
 
-import { getErrorMessage, readJson } from "@/lib/api-client";
+import { getErrorMessage, readJson, sendJson } from "@/lib/api-client";
 import { buildRunGraph } from "@/lib/run-graph";
 import { formatCount, formatShortId, formatTimestamp, isTerminalRunStatus } from "@/lib/format";
-import type { RunEvent, RunState } from "@/lib/types";
+import type { Output, RunEvent, RunState, Task } from "@/lib/types";
 
 import { EventsTimeline } from "./events-timeline";
 import { HandoffMermaid } from "./handoff-mermaid";
@@ -22,8 +22,10 @@ type RunDetailSnapshot = {
   eventsError: string | null;
   isLoading: boolean;
   lastUpdated: string | null;
+  outputs: Output[];
   run: RunState | null;
   runError: string | null;
+  tasks: Task[];
 };
 
 const INITIAL_SNAPSHOT: RunDetailSnapshot = {
@@ -31,32 +33,42 @@ const INITIAL_SNAPSHOT: RunDetailSnapshot = {
   eventsError: null,
   isLoading: true,
   lastUpdated: null,
+  outputs: [],
   run: null,
-  runError: null
+  runError: null,
+  tasks: []
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  coordinator: "Coordinator",
+  architect: "Architect",
+  implementer: "Implementer",
+  reviewer: "Reviewer"
 };
 
 export function RunDetailScreen({ runId }: RunDetailScreenProps) {
   const [snapshot, setSnapshot] = useState<RunDetailSnapshot>(INITIAL_SNAPSHOT);
+  const [isCancelling, setIsCancelling] = useState(false);
   const shouldPoll = !snapshot.run || !isTerminalRunStatus(snapshot.run.status);
 
   const loadRunDetail = useEffectEvent(async () => {
-    const [runResult, eventsResult] = await Promise.allSettled([
+    const [runResult, eventsResult, tasksResult, outputsResult] = await Promise.allSettled([
       readJson<RunState>(`/api/runs/${runId}/state`),
-      readJson<RunEvent[]>(`/api/runs/${runId}/events`)
+      readJson<RunEvent[]>(`/api/runs/${runId}/events`),
+      readJson<Task[]>(`/api/runs/${runId}/tasks`),
+      readJson<Output[]>(`/api/runs/${runId}/outputs`)
     ]);
 
     startTransition(() => {
       setSnapshot((current) => ({
-        events:
-          eventsResult.status === "fulfilled" ? eventsResult.value : current.events,
-        eventsError:
-          eventsResult.status === "fulfilled" ? null : getErrorMessage(eventsResult.reason),
+        events: eventsResult.status === "fulfilled" ? eventsResult.value : current.events,
+        eventsError: eventsResult.status === "fulfilled" ? null : getErrorMessage(eventsResult.reason),
         isLoading: false,
         lastUpdated: new Date().toISOString(),
-        run:
-          runResult.status === "fulfilled" ? runResult.value : current.run,
-        runError:
-          runResult.status === "fulfilled" ? null : getErrorMessage(runResult.reason)
+        outputs: outputsResult.status === "fulfilled" ? outputsResult.value : current.outputs,
+        run: runResult.status === "fulfilled" ? runResult.value : current.run,
+        runError: runResult.status === "fulfilled" ? null : getErrorMessage(runResult.reason),
+        tasks: tasksResult.status === "fulfilled" ? tasksResult.value : current.tasks
       }));
     });
   });
@@ -66,27 +78,31 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
   }, [runId]);
 
   useEffect(() => {
-    if (!shouldPoll) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      void loadRunDetail();
-    }, 5_000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
+    if (!shouldPoll) return;
+    const intervalId = window.setInterval(() => void loadRunDetail(), 5_000);
+    return () => window.clearInterval(intervalId);
   }, [shouldPoll]);
 
+  const handleCancel = useCallback(async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await sendJson(`/api/runs/${runId}/cancel`, "PATCH");
+      await loadRunDetail();
+    } catch {
+      // ignore — run might already be terminal
+    } finally {
+      setIsCancelling(false);
+    }
+  }, [runId, isCancelling]);
+
   const graph = buildRunGraph(snapshot.run, snapshot.events);
+  const canCancel = snapshot.run && !isTerminalRunStatus(snapshot.run.status);
 
   return (
     <main className="shell detail-shell">
       <div className="page-stack">
-        <Link href="/" className="back-link">
-          Back to runs
-        </Link>
+        <Link href="/" className="back-link">Back to runs</Link>
 
         <section className="panel hero-panel">
           <div className="hero-grid">
@@ -94,8 +110,7 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
               <span className="eyebrow">Run Detail</span>
               <h1>{snapshot.run ? snapshot.run.goal : `Run ${formatShortId(runId)}`}</h1>
               <p>
-                Event chronology, run state, and the canonical handoff chain from coordinator
-                to reviewer. When the backend behaves, this is pleasant.
+                Event chronology, agent outputs, and the canonical handoff chain.
               </p>
             </div>
             <RefreshPill lastUpdated={snapshot.lastUpdated} />
@@ -103,9 +118,7 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
         </section>
 
         {snapshot.runError ? (
-          <div className="error-banner">
-            Failed to load the run state: {snapshot.runError}
-          </div>
+          <div className="error-banner">Failed to load the run state: {snapshot.runError}</div>
         ) : null}
 
         {snapshot.isLoading && !snapshot.run ? (
@@ -119,11 +132,21 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
                 <div>
                   <p className="section-kicker">Overview</p>
                   <h2 className="section-title">{formatShortId(snapshot.run.id)}</h2>
-                  <p className="section-copy">
-                    Project {snapshot.run.projectId}
-                  </p>
+                  <p className="section-copy">Project {snapshot.run.projectId}</p>
                 </div>
-                <StatusBadge status={snapshot.run.status} />
+                <div className="overview-actions">
+                  <StatusBadge status={snapshot.run.status} />
+                  {canCancel ? (
+                    <button
+                      type="button"
+                      className="cancel-btn"
+                      onClick={() => void handleCancel()}
+                      disabled={isCancelling}
+                    >
+                      {isCancelling ? "Cancelling…" : "Cancel run"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               <div className="stats-grid">
@@ -137,15 +160,11 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
                 </div>
                 <div className="meta-card">
                   <span className="meta-label">Completed</span>
-                  <p className="meta-value">
-                    {formatCount(snapshot.run.completedTaskIds.length, "task")}
-                  </p>
+                  <p className="meta-value">{formatCount(snapshot.run.completedTaskIds.length, "task")}</p>
                 </div>
                 <div className="meta-card">
                   <span className="meta-label">Outputs</span>
-                  <p className="meta-value">
-                    {formatCount(snapshot.run.outputIds.length, "artifact")}
-                  </p>
+                  <p className="meta-value">{formatCount(snapshot.run.outputIds.length, "artifact")}</p>
                 </div>
               </div>
             </section>
@@ -155,12 +174,8 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
                 <div>
                   <p className="section-kicker">Load</p>
                   <h2 className="section-title">Operational counters</h2>
-                  <p className="section-copy">
-                    Queue and approval pressure, without pretending this is observability nirvana.
-                  </p>
                 </div>
               </div>
-
               <div className="metric-strip">
                 <div className="metric-card">
                   <strong>{snapshot.run.queuedTaskIds.length}</strong>
@@ -182,33 +197,77 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
                 <div>
                   <p className="section-kicker">Handoffs</p>
                   <h2 className="section-title">Agent path</h2>
-                  <p className="section-copy">
-                    Coordinator to architect to implementer to reviewer. Active connection is
-                    highlighted when the data exists.
-                  </p>
                 </div>
               </div>
-
               <HandoffMermaid definition={graph.definition} caption={graph.caption} />
             </section>
+
+            {snapshot.outputs.length > 0 ? (
+              <section className="panel panel-content timeline-panel">
+                <div className="panel-header">
+                  <div>
+                    <p className="section-kicker">Agent Outputs</p>
+                    <h2 className="section-title">
+                      {formatCount(snapshot.outputs.length, "output")}
+                    </h2>
+                    <p className="section-copy">
+                      What each agent produced — summaries, decisions, and artifacts.
+                    </p>
+                  </div>
+                </div>
+                <div className="output-stack">
+                  {snapshot.outputs.map((output) => (
+                    <div key={output.id} className="output-card">
+                      <div className="output-head">
+                        <span className={`role-badge role-badge-${output.roleId}`}>
+                          {ROLE_LABELS[output.roleId] ?? output.roleId}
+                        </span>
+                        <span className="output-time">{formatTimestamp(output.createdAt)}</span>
+                      </div>
+
+                      <p className="output-summary">{output.summary}</p>
+
+                      {output.blockers.length > 0 ? (
+                        <div className="output-blockers">
+                          {output.blockers.map((b, i) => (
+                            <p key={i} className="output-blocker">⚠ {b}</p>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {output.decisions.length > 0 ? (
+                        <ul className="output-decisions">
+                          {output.decisions.map((d, i) => (
+                            <li key={i}>{d}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      {output.artifacts.map((a, i) => (
+                        <div key={i} className="artifact-preview">
+                          <span className="artifact-kind">{a.kind}</span>
+                          {a.path ? <span className="artifact-path">{a.path}</span> : null}
+                          <p className="artifact-content">
+                            {a.content.length > 320 ? `${a.content.slice(0, 320)}…` : a.content}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="panel panel-content timeline-panel">
               <div className="panel-header">
                 <div>
                   <p className="section-kicker">Timeline</p>
                   <h2 className="section-title">Run events</h2>
-                  <p className="section-copy">
-                    Ordered event stream from the state server.
-                  </p>
                 </div>
               </div>
-
               {snapshot.eventsError ? (
-                <div className="notice-banner">
-                  Event loading failed: {snapshot.eventsError}
-                </div>
+                <div className="notice-banner">Event loading failed: {snapshot.eventsError}</div>
               ) : null}
-
               <EventsTimeline events={snapshot.events} />
             </section>
           </div>

@@ -35,5 +35,23 @@ export async function initSchema(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS run_events_run_id_idx ON run_events (run_id);
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id         TEXT PRIMARY KEY,
+      run_id     TEXT NOT NULL,
+      data       JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS tasks_run_id_idx ON tasks (run_id);
+
+    CREATE TABLE IF NOT EXISTS outputs (
+      id         TEXT PRIMARY KEY,
+      task_id    TEXT NOT NULL,
+      data       JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS outputs_task_id_idx ON outputs (task_id);
   `);
 }

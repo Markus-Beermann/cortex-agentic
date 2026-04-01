@@ -700,6 +700,346 @@ select {
   }
 }
 
+/* ── overview actions (cancel + status badge row) ── */
+.overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── cancel / action buttons ── */
+.cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 111, 97, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 111, 97, 0.1);
+  color: #ffb0a7;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(255, 111, 97, 0.18);
+  border-color: rgba(255, 111, 97, 0.55);
+}
+
+.cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── new run button (in run-list header) ── */
+.new-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: start;
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border: 1px solid rgba(87, 164, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(87, 164, 255, 0.1);
+  color: #d7e6ff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.new-run-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(87, 164, 255, 0.18);
+  border-color: rgba(87, 164, 255, 0.55);
+}
+
+/* ── agent outputs ── */
+.output-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.output-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(135, 164, 196, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.output-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.output-time {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.output-summary {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.output-blockers {
+  display: grid;
+  gap: 6px;
+}
+
+.output-blocker {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 199, 95, 0.1);
+  color: #ffe09c;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.output-decisions {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.artifact-preview {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(5, 12, 21, 0.5);
+  border: 1px solid rgba(135, 164, 196, 0.12);
+}
+
+.artifact-kind {
+  display: inline-flex;
+  align-self: start;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(87, 164, 255, 0.14);
+  color: #9ac8ff;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.artifact-path {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: "SF Mono", "Geist Mono", monospace;
+}
+
+.artifact-content {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── role badges ── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.role-badge-coordinator {
+  background: rgba(87, 164, 255, 0.16);
+  color: #95c4ff;
+}
+
+.role-badge-architect {
+  background: rgba(162, 117, 255, 0.16);
+  color: #cbb2ff;
+}
+
+.role-badge-implementer {
+  background: rgba(53, 212, 154, 0.16);
+  color: #88ffd0;
+}
+
+.role-badge-reviewer {
+  background: rgba(255, 199, 95, 0.16);
+  color: #ffe09c;
+}
+
+/* ── new run modal ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 8, 16, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.modal-panel {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid rgba(135, 164, 196, 0.2);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(13, 27, 47, 0.98), rgba(9, 20, 35, 0.98));
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.48);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(135, 164, 196, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.modal-form {
+  display: grid;
+  gap: 14px;
+}
+
+.modal-label {
+  display: block;
+  margin-bottom: -8px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.modal-textarea,
+.modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(135, 164, 196, 0.2);
+  border-radius: 14px;
+  background: rgba(5, 12, 21, 0.6);
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 140ms ease;
+}
+
+.modal-textarea:focus,
+.modal-input:focus {
+  outline: none;
+  border-color: rgba(87, 164, 255, 0.5);
+}
+
+.modal-textarea:disabled,
+.modal-input:disabled {
+  opacity: 0.5;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.modal-cancel-btn {
+  padding: 10px 18px;
+  border: 1px solid rgba(135, 164, 196, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.modal-cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.modal-submit-btn {
+  padding: 10px 22px;
+  border: 1px solid rgba(87, 164, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(87, 164, 255, 0.14);
+  color: #d7e6ff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.modal-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(87, 164, 255, 0.24);
+  border-color: rgba(87, 164, 255, 0.6);
+}
+
+.modal-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 @media (min-width: 760px) {
   .topbar-wrap,
   .shell {

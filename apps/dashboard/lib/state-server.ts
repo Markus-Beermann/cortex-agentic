@@ -1,4 +1,4 @@
-import type { RunEvent, RunState, RunStatus } from "@/lib/types";
+import type { Output, OutputArtifact, RunEvent, RunState, RunStatus, Task, TaskStatus } from "@/lib/types";
 
 class StateServerError extends Error {
   public readonly status: number;
@@ -102,12 +102,15 @@ function extractResponseError(payload: unknown): string | null {
   return null;
 }
 
-async function requestJson(path: string): Promise<unknown> {
+async function requestJson(path: string, options?: { method?: string; body?: unknown }): Promise<unknown> {
   const response = await fetch(getStateServerUrl(path), {
+    method: options?.method ?? "GET",
     cache: "no-store",
     headers: {
-      accept: "application/json"
+      accept: "application/json",
+      ...(options?.body !== undefined ? { "content-type": "application/json" } : {})
     },
+    body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
     signal: AbortSignal.timeout(8_000)
   });
 
@@ -193,4 +196,89 @@ export async function readRunEvents(runId: string): Promise<RunEvent[]> {
   }
 
   return payload.map(normalizeRunEvent);
+}
+
+function readTaskStatus(value: unknown): TaskStatus {
+  const s = readString(value, "status");
+  if (s !== "queued" && s !== "in_progress" && s !== "completed" && s !== "failed") {
+    throw new StateServerError("Invalid task status.", 502);
+  }
+  return s;
+}
+
+function normalizeTask(value: unknown): Task {
+  if (!isRecord(value)) throw new StateServerError("Invalid task payload.", 502);
+  return {
+    id: readString(value.id, "id"),
+    runId: readString(value.runId, "runId"),
+    projectId: readString(value.projectId, "projectId"),
+    title: readString(value.title, "title"),
+    objective: readString(value.objective, "objective"),
+    requestedRole: readString(value.requestedRole, "requestedRole"),
+    constraints: readStringArray(value.constraints, "constraints"),
+    inputContext: readStringArray(value.inputContext, "inputContext"),
+    acceptanceCriteria: readStringArray(value.acceptanceCriteria, "acceptanceCriteria"),
+    status: readTaskStatus(value.status),
+    approvalMode: readString(value.approvalMode, "approvalMode"),
+    createdAt: normalizeTimestamp(value.createdAt, "createdAt"),
+    updatedAt: normalizeTimestamp(value.updatedAt, "updatedAt")
+  };
+}
+
+function normalizeArtifact(value: unknown): OutputArtifact {
+  if (!isRecord(value)) throw new StateServerError("Invalid artifact.", 502);
+  const kind = readString(value.kind, "kind");
+  if (kind !== "note" && kind !== "file" && kind !== "decision") {
+    throw new StateServerError("Invalid artifact kind.", 502);
+  }
+  return {
+    kind,
+    path: typeof value.path === "string" ? value.path : undefined,
+    content: readString(value.content, "content"),
+    note: typeof value.note === "string" ? value.note : undefined
+  };
+}
+
+function normalizeOutput(value: unknown): Output {
+  if (!isRecord(value)) throw new StateServerError("Invalid output payload.", 502);
+  const nextAction = isRecord(value.nextAction) ? value.nextAction : {};
+  return {
+    id: readString(value.id, "id"),
+    taskId: readString(value.taskId, "taskId"),
+    roleId: readString(value.roleId, "roleId"),
+    createdAt: normalizeTimestamp(value.createdAt, "createdAt"),
+    summary: readString(value.summary, "summary"),
+    decisions: readStringArray(value.decisions, "decisions"),
+    blockers: readStringArray(value.blockers, "blockers"),
+    artifacts: Array.isArray(value.artifacts) ? value.artifacts.map(normalizeArtifact) : [],
+    nextAction: {
+      kind: typeof nextAction.kind === "string" ? nextAction.kind : "complete",
+      targetRole: typeof nextAction.targetRole === "string" ? nextAction.targetRole : undefined,
+      taskTitle: typeof nextAction.taskTitle === "string" ? nextAction.taskTitle : undefined
+    }
+  };
+}
+
+export async function listTasks(runId: string): Promise<Task[]> {
+  const payload = await requestJson(`/runs/${runId}/tasks`);
+  if (!Array.isArray(payload)) throw new StateServerError("Invalid tasks payload.", 502);
+  return payload.map(normalizeTask);
+}
+
+export async function listOutputs(runId: string): Promise<Output[]> {
+  const payload = await requestJson(`/runs/${runId}/outputs`);
+  if (!Array.isArray(payload)) throw new StateServerError("Invalid outputs payload.", 502);
+  return payload.map(normalizeOutput);
+}
+
+export async function cancelRun(runId: string): Promise<RunState> {
+  return normalizeRunState(
+    await requestJson(`/runs/${runId}/cancel`, { method: "PATCH" })
+  );
+}
+
+export async function createRun(goal: string, projectId = "remote"): Promise<RunState> {
+  return normalizeRunState(
+    await requestJson("/runs", { method: "POST", body: { goal, projectId } })
+  );
 }

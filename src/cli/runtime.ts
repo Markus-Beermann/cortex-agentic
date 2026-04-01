@@ -6,7 +6,12 @@ import type { ApprovalMode, RoleId } from "../core/contracts";
 import { DefaultExecutionPolicy } from "../core/policies/execution-policy";
 import { SessionRunner } from "../engine/session-runner";
 import { getPool } from "../server/db";
-import { DualWriteEventLogStore, DualWriteRunStateStore } from "../server/dual-write-stores";
+import {
+  DualWriteEventLogStore,
+  DualWriteOutputStore,
+  DualWriteRunStateStore,
+  DualWriteTaskStore
+} from "../server/dual-write-stores";
 import { createDefaultRegistry } from "../state/default-registry";
 import { ApprovalRequestStore } from "../state/approval-request.store";
 import { EventLogStore } from "../state/event-log.store";
@@ -46,8 +51,12 @@ export async function createCliSessionRunnerWithOptions(
   await registryStore.seed(createDefaultRegistry());
 
   const approvalRequestStore = new ApprovalRequestStore(rootPath);
-  const taskStore = new TaskStore(rootPath);
-  const outputStore = new OutputStore(rootPath);
+  const taskStore = process.env.DATABASE_PUBLIC_URL
+    ? new DualWriteTaskStore(rootPath, getPool())
+    : new TaskStore(rootPath);
+  const outputStore = process.env.DATABASE_PUBLIC_URL
+    ? new DualWriteOutputStore(rootPath, getPool())
+    : new OutputStore(rootPath);
   const handoffStore = new HandoffStore(rootPath);
   const runStateStore = process.env.DATABASE_PUBLIC_URL
     ? new DualWriteRunStateStore(rootPath, getPool())

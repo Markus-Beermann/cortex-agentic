@@ -1,8 +1,10 @@
 import type { Pool } from "pg";
 
-import type { RunEvent, RunState } from "../core/contracts";
+import type { Output, RunEvent, RunState, Task } from "../core/contracts";
 import { EventLogStore } from "../state/event-log.store";
+import { OutputStore } from "../state/output.store";
 import { RunStateStore } from "../state/run-state.store";
+import { TaskStore } from "../state/task.store";
 
 export class DualWriteRunStateStore extends RunStateStore {
   public constructor(
@@ -30,6 +32,46 @@ export class DualWriteRunStateStore extends RunStateStore {
         saved.createdAt,
         saved.updatedAt
       ]
+    );
+    return saved;
+  }
+}
+
+export class DualWriteTaskStore extends TaskStore {
+  public constructor(
+    rootPath: string,
+    private readonly pool: Pool
+  ) {
+    super(rootPath);
+  }
+
+  public override async save(task: Task): Promise<Task> {
+    const saved = await super.save(task);
+    await this.pool.query(
+      `INSERT INTO tasks (id, run_id, data, created_at)
+       VALUES ($1, $2, $3::jsonb, $4)
+       ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`,
+      [saved.id, saved.runId, JSON.stringify(saved), saved.createdAt]
+    );
+    return saved;
+  }
+}
+
+export class DualWriteOutputStore extends OutputStore {
+  public constructor(
+    rootPath: string,
+    private readonly pool: Pool
+  ) {
+    super(rootPath);
+  }
+
+  public override async save(output: Output): Promise<Output> {
+    const saved = await super.save(output);
+    await this.pool.query(
+      `INSERT INTO outputs (id, task_id, data, created_at)
+       VALUES ($1, $2, $3::jsonb, $4)
+       ON CONFLICT (id) DO NOTHING`,
+      [saved.id, saved.taskId, JSON.stringify(saved), saved.createdAt]
     );
     return saved;
   }

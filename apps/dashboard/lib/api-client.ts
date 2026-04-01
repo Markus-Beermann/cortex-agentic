@@ -54,3 +54,27 @@ export async function readJson<T>(path: string): Promise<T> {
 
   return payload as T;
 }
+
+export async function sendJson<T = unknown>(
+  path: string,
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
+  body?: unknown
+): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    cache: "no-store",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json"
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+
+  const payload = parseJson(await response.text());
+
+  if (!response.ok) {
+    throw new Error(extractError(payload) ?? response.statusText ?? "Request failed");
+  }
+
+  return payload as T;
+}

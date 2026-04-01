@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useEffect, useEffectEvent, useState } from "react";
+import { startTransition, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 
-import { getErrorMessage, readJson } from "@/lib/api-client";
+import { getErrorMessage, readJson, sendJson } from "@/lib/api-client";
 import { formatCount, formatShortId, formatTimestamp } from "@/lib/format";
 import type { RunState } from "@/lib/types";
 
@@ -26,6 +26,12 @@ const INITIAL_SNAPSHOT: RunsSnapshot = {
 
 export function RunListScreen() {
   const [snapshot, setSnapshot] = useState<RunsSnapshot>(INITIAL_SNAPSHOT);
+  const [showModal, setShowModal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
+  const [projectInput, setProjectInput] = useState("remote");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const goalRef = useRef<HTMLTextAreaElement>(null);
 
   const loadRuns = useEffectEvent(async () => {
     try {
@@ -63,7 +69,38 @@ export function RunListScreen() {
     };
   }, []);
 
+  const openModal = useCallback(() => {
+    setGoalInput("");
+    setProjectInput("remote");
+    setSubmitError(null);
+    setShowModal(true);
+    setTimeout(() => goalRef.current?.focus(), 60);
+  }, []);
+
+  const closeModal = useCallback(() => {
+    if (isSubmitting) return;
+    setShowModal(false);
+  }, [isSubmitting]);
+
+  const handleSubmitRun = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    const goal = goalInput.trim();
+    if (!goal || isSubmitting) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await sendJson("/api/runs", "POST", { goal, projectId: projectInput.trim() || "remote" });
+      setShowModal(false);
+      void loadRuns();
+    } catch (error) {
+      setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [goalInput, projectInput, isSubmitting]);
+
   return (
+    <>
     <main className="shell">
       <div className="page-stack">
         <section className="panel hero-panel">
@@ -90,6 +127,9 @@ export function RunListScreen() {
                 Auto-refresh is on. The backend decides the truth; the UI just reports the damage.
               </p>
             </div>
+            <button type="button" className="new-run-btn" onClick={openModal}>
+              + New run
+            </button>
           </div>
 
           {snapshot.error ? (
@@ -149,5 +189,57 @@ export function RunListScreen() {
         </section>
       </div>
     </main>
+
+    {showModal ? (
+
+      <div className="modal-backdrop" onClick={closeModal}>
+        <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 className="modal-title">New run</h2>
+            <button type="button" className="modal-close" onClick={closeModal} aria-label="Close">✕</button>
+          </div>
+          <form onSubmit={(e) => void handleSubmitRun(e)} className="modal-form">
+            <label className="modal-label" htmlFor="goal-input">
+              Goal
+            </label>
+            <textarea
+              id="goal-input"
+              ref={goalRef}
+              className="modal-textarea"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="Describe what the orchestrator should accomplish…"
+              rows={4}
+              required
+              disabled={isSubmitting}
+            />
+            <label className="modal-label" htmlFor="project-input">
+              Project ID
+            </label>
+            <input
+              id="project-input"
+              type="text"
+              className="modal-input"
+              value={projectInput}
+              onChange={(e) => setProjectInput(e.target.value)}
+              placeholder="remote"
+              disabled={isSubmitting}
+            />
+            {submitError ? (
+              <div className="error-banner">{submitError}</div>
+            ) : null}
+            <div className="modal-actions">
+              <button type="button" className="modal-cancel-btn" onClick={closeModal} disabled={isSubmitting}>
+                Cancel
+              </button>
+              <button type="submit" className="modal-submit-btn" disabled={!goalInput.trim() || isSubmitting}>
+                {isSubmitting ? "Starting…" : "Start run"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }
