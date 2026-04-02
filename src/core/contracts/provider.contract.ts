@@ -31,6 +31,14 @@ export const RunProgressSchema = z.object({
   completedWork: z.array(CompletedWorkItemSchema).default([])
 });
 
+export const ExecutionProfileSchema = z.object({
+  workType: z.enum(["content", "code", "analysis", "unknown"]),
+  complexity: z.enum(["simple", "standard", "complex"]),
+  routingStrategy: z.enum(["direct-implementer", "plan-then-implement", "full-pipeline"]),
+  reviewMode: z.enum(["skip-review", "review-required"]),
+  rationale: z.array(z.string()).default([])
+});
+
 export const ProviderRequestSchema = z.object({
   id: IdentifierSchema,
   providerId: z.string().min(1),
@@ -45,6 +53,7 @@ export const ProviderRequestSchema = z.object({
   allowedHandoffs: z.array(RoleIdSchema).default([]),
   projectContext: ProjectContextSchema,
   selectedContext: ContextSelectionSchema,
+  executionProfile: ExecutionProfileSchema,
   handoffApprovalMode: ApprovalModeSchema,
   runProgress: RunProgressSchema,
   task: TaskSchema,
@@ -63,6 +72,7 @@ export type ProviderRequest = z.infer<typeof ProviderRequestSchema>;
 export type ProviderResponse = z.infer<typeof ProviderResponseSchema>;
 export type CompletedWorkItem = z.infer<typeof CompletedWorkItemSchema>;
 export type RunProgress = z.infer<typeof RunProgressSchema>;
+export type ExecutionProfile = z.infer<typeof ExecutionProfileSchema>;
 
 export function validateProviderRequest(value: unknown): ProviderRequest {
   return ProviderRequestSchema.parse(value);

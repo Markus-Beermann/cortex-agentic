@@ -11,40 +11,6 @@ function containsAny(value: string, patterns: string[]): boolean {
   return patterns.some((pattern) => value.includes(pattern));
 }
 
-function isSimpleContentGoal(goal: string): boolean {
-  const normalizedGoal = goal.toLowerCase();
-  const contentKeywords = [
-    "article",
-    "artikel",
-    "blog",
-    "post",
-    "essay",
-    "summary",
-    "documentation",
-    "document",
-    "write",
-    "schreibe"
-  ];
-  const engineeringKeywords = [
-    "api",
-    "service",
-    "microservice",
-    "refactor",
-    "migrate",
-    "bug",
-    "fix",
-    "debug",
-    "port",
-    "engine",
-    "typescript",
-    "javascript",
-    "python",
-    "database"
-  ];
-
-  return containsAny(normalizedGoal, contentKeywords) && !containsAny(normalizedGoal, engineeringKeywords);
-}
-
 function deriveTopic(goal: string): string {
   const normalizedGoal = goal.trim();
   const aboutMatch = normalizedGoal.match(/(?:about|über)\s+(.+)$/iu);
@@ -99,12 +65,14 @@ export class NoopProviderAdapter implements ProviderPort {
       selectedContext.focusPaths.length > 0
         ? selectedContext.focusPaths.slice(0, 3).join(", ")
         : "no focused paths";
+    const executionProfile = request.executionProfile;
     const output = this.buildOutput(
       task,
       personaName,
       projectContext,
       stackSummary,
       focusSummary,
+      executionProfile,
       request.handoffApprovalMode,
       timestamp
     );
@@ -127,18 +95,20 @@ export class NoopProviderAdapter implements ProviderPort {
     projectContext: ProviderRequest["projectContext"],
     stackSummary: string,
     focusSummary: string,
+    executionProfile: ProviderRequest["executionProfile"],
     handoffApprovalMode: ApprovalMode,
     timestamp: string
   ): Output {
     switch (task.requestedRole) {
       case "coordinator":
-        if (isSimpleContentGoal(task.objective)) {
+        if (executionProfile.routingStrategy === "direct-implementer") {
           return {
             id: randomUUID(),
             taskId: task.id,
             roleId: "coordinator",
             summary: `${personaName} classified the goal "${task.objective}" as a bounded content task and skipped architecture work.`,
             decisions: [
+              ...executionProfile.rationale,
               "The goal is simple enough for direct execution.",
               "A separate review hop is unnecessary because the deliverable can be inspected on disk."
             ],
@@ -228,13 +198,17 @@ export class NoopProviderAdapter implements ProviderPort {
           createdAt: timestamp
         };
       case "implementer":
-        if (isSimpleContentGoal(task.objective)) {
+        if (
+          executionProfile.routingStrategy === "direct-implementer" &&
+          executionProfile.workType === "content"
+        ) {
           return {
             id: randomUUID(),
             taskId: task.id,
             roleId: "implementer",
             summary: `${personaName} wrote the requested article directly into the sandbox project.`,
             decisions: [
+              ...executionProfile.rationale,
               "The task was treated as a bounded writing deliverable.",
               `The file was prepared relative to ${projectContext.rootPath}.`
             ],

@@ -75,6 +75,13 @@ function createProviderRequest(): ProviderRequest {
       relevantDocuments: ["docs/architecture/orchestrator-architecture.md"],
       notes: ["The repo is currently dirty."]
     },
+    executionProfile: {
+      workType: "code",
+      complexity: "standard",
+      routingStrategy: "plan-then-implement",
+      reviewMode: "review-required",
+      rationale: ["The goal requires architecture before implementation."]
+    },
     runProgress: {
       status: "running",
       activeTaskId: "task-1",
@@ -137,6 +144,7 @@ describe("PromptBuilder", () => {
     expect(prompt.systemPrompt).toContain("Turn goals into bounded work.");
     expect(prompt.systemPrompt).toContain("Turn the goal into bounded work packages.");
     expect(prompt.systemPrompt).toContain("George routed planning work.");
+    expect(prompt.systemPrompt).toContain("Routing strategy: plan-then-implement");
     expect(prompt.systemPrompt).toContain('If you hand off, use approvalMode "needs-approval".');
     expect(prompt.userPrompt).toContain('task "Design the implementation plan"');
   });

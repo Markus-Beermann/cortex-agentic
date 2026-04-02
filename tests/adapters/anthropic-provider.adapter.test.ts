@@ -75,6 +75,13 @@ function createProviderRequest(): ProviderRequest {
       relevantDocuments: ["docs/architecture/orchestrator-architecture.md"],
       notes: []
     },
+    executionProfile: {
+      workType: "code",
+      complexity: "standard",
+      routingStrategy: "plan-then-implement",
+      reviewMode: "review-required",
+      rationale: ["The goal should be planned before implementation."]
+    },
     runProgress: {
       status: "running",
       activeTaskId: "task-1",

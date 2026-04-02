@@ -39,3 +39,4 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Opened coordinator routing so trivial work can skip architecture and/or review instead of forcing every run through all four roles.
 - Updated noop-provider heuristics and engine tests so a simple article request can complete in `sandbox/` with a real Markdown file on disk.
 - Aligned server, dashboard, and poll defaults around `sandbox` for disposable engine testing.
+- Added an explicit execution profile to provider requests so routing decisions are described as first-class context instead of living only inside provider heuristics.
