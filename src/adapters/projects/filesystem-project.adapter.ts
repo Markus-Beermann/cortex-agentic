@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -10,13 +10,19 @@ import type { ProjectAdapterPort } from "./project-adapter.port";
 
 const execFileAsync = promisify(execFile);
 
+function normalizePath(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
 export class FilesystemProjectAdapter implements ProjectAdapterPort {
-  public constructor(private readonly rootPath: string) {}
+  public constructor(private readonly workspaceRootPath: string) {}
 
   public async loadContext(projectId: string): Promise<ProjectContext> {
-    const documents = await this.collectDocuments();
-    const repository = await this.collectRepositoryInfo();
-    const stack = await this.collectStackInfo();
+    const projectRootPath = await this.resolveProjectRootPath(projectId);
+    const projectRelativePath = this.relativeToWorkspace(projectRootPath);
+    const documents = await this.collectDocuments(projectRootPath, projectRelativePath);
+    const repository = await this.collectRepositoryInfo(projectRelativePath);
+    const stack = await this.collectStackInfo(projectRootPath, projectRelativePath);
     const contexts = buildProjectContexts({
       documents,
       stack,
@@ -25,14 +31,14 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
 
     return validateProjectContext({
       projectId,
-      rootPath: this.rootPath,
-      runtimePath: path.join(this.rootPath, ".orchestrator"),
+      rootPath: projectRootPath,
+      runtimePath: path.join(this.workspaceRootPath, ".orchestrator"),
       documents,
       repository,
       stack,
       focusPaths: contexts.planningContext.focusPaths,
       contexts,
-      notes: this.buildNotes(repository)
+      notes: this.buildNotes(repository, projectRelativePath)
     });
   }
 
@@ -45,13 +51,59 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     }
   }
 
-  private async collectDocuments(): Promise<ProjectDocument[]> {
-    const candidates: Array<ProjectDocument> = [
+  private async isDirectory(filePath: string): Promise<boolean> {
+    try {
+      const entry = await stat(filePath);
+      return entry.isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  private async resolveProjectRootPath(projectId: string): Promise<string> {
+    const candidatePath = path.resolve(this.workspaceRootPath, projectId);
+
+    if (!this.isInsideWorkspace(candidatePath) || candidatePath === this.workspaceRootPath) {
+      return this.workspaceRootPath;
+    }
+
+    if (await this.isDirectory(candidatePath)) {
+      return candidatePath;
+    }
+
+    return this.workspaceRootPath;
+  }
+
+  private isInsideWorkspace(candidatePath: string): boolean {
+    return (
+      candidatePath === this.workspaceRootPath ||
+      candidatePath.startsWith(`${this.workspaceRootPath}${path.sep}`)
+    );
+  }
+
+  private relativeToWorkspace(filePath: string): string {
+    const relativePath = path.relative(this.workspaceRootPath, filePath);
+    return relativePath.length === 0 ? "." : normalizePath(relativePath);
+  }
+
+  private resolveScopedPath(scopeRootPath: string, relativePath: string): string {
+    return scopeRootPath === this.workspaceRootPath
+      ? normalizePath(relativePath)
+      : normalizePath(path.join(this.relativeToWorkspace(scopeRootPath), relativePath));
+  }
+
+  private async collectDocuments(
+    projectRootPath: string,
+    projectRelativePath: string
+  ): Promise<ProjectDocument[]> {
+    const workspaceCandidates: Array<ProjectDocument> = [
       { path: "AGENTS.md", kind: "governance" },
       { path: "docs/MASTER_Agent_Rules.md", kind: "governance" },
       { path: "docs/architecture/orchestrator-architecture.md", kind: "architecture" },
       { path: "docs/agent-context/agent-bootstrap-index.md", kind: "bootstrap" },
-      { path: "docs/project/collaboration-log.md", kind: "log" },
+      { path: "docs/project/collaboration-log.md", kind: "log" }
+    ];
+    const projectCandidates: Array<ProjectDocument> = [
       { path: "package.json", kind: "manifest" },
       { path: "tsconfig.json", kind: "config" },
       { path: "vitest.config.ts", kind: "config" }
@@ -59,17 +111,33 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
 
     const documents: ProjectDocument[] = [];
 
-    for (const candidate of candidates) {
-      if (await this.exists(path.join(this.rootPath, candidate.path))) {
+    for (const candidate of workspaceCandidates) {
+      if (await this.exists(path.join(this.workspaceRootPath, candidate.path))) {
         documents.push(candidate);
+      }
+    }
+
+    for (const candidate of projectCandidates) {
+      if (await this.exists(path.join(projectRootPath, candidate.path))) {
+        documents.push({
+          ...candidate,
+          path:
+            projectRelativePath === "."
+              ? candidate.path
+              : this.resolveScopedPath(projectRootPath, candidate.path)
+        });
       }
     }
 
     return documents;
   }
 
-  private async collectRepositoryInfo(): Promise<ProjectContext["repository"]> {
-    const isGitRepo = (await this.runGit(["rev-parse", "--is-inside-work-tree"])) === "true";
+  private async collectRepositoryInfo(
+    projectRelativePath: string
+  ): Promise<ProjectContext["repository"]> {
+    const isGitRepo =
+      (await this.runGit(["rev-parse", "--is-inside-work-tree"], this.workspaceRootPath)) ===
+      "true";
 
     if (!isGitRepo) {
       return {
@@ -82,13 +150,14 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
       };
     }
 
-    const currentBranch = (await this.runGit(["branch", "--show-current"])) || null;
-    const remotesOutput = await this.runGit(["remote"]);
-    const statusOutput = await this.runGit([
-      "status",
-      "--short",
-      "--untracked-files=all"
-    ]);
+    const currentBranch =
+      (await this.runGit(["branch", "--show-current"], this.workspaceRootPath)) || null;
+    const remotesOutput = await this.runGit(["remote"], this.workspaceRootPath);
+    const statusArgs =
+      projectRelativePath === "."
+        ? ["status", "--short", "--untracked-files=all"]
+        : ["status", "--short", "--untracked-files=all", "--", projectRelativePath];
+    const statusOutput = await this.runGit(statusArgs, this.workspaceRootPath);
     const statusEntries = (statusOutput || "")
       .split("\n")
       .map((line) => line.trimEnd())
@@ -114,7 +183,10 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     };
   }
 
-  private async collectStackInfo(): Promise<ProjectContext["stack"]> {
+  private async collectStackInfo(
+    projectRootPath: string,
+    projectRelativePath: string
+  ): Promise<ProjectContext["stack"]> {
     const manifests = [
       "package.json",
       "package-lock.json",
@@ -134,27 +206,39 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
       ".gitignore"
     ];
 
-    const existingManifests: string[] = [];
-    const existingConfigs: string[] = [];
+    const existingManifestNames: string[] = [];
+    const existingConfigNames: string[] = [];
+    const existingManifestPaths: string[] = [];
+    const existingConfigPaths: string[] = [];
 
     for (const manifestPath of manifests) {
-      if (await this.exists(path.join(this.rootPath, manifestPath))) {
-        existingManifests.push(manifestPath);
+      if (await this.exists(path.join(projectRootPath, manifestPath))) {
+        existingManifestNames.push(manifestPath);
+        existingManifestPaths.push(
+          projectRelativePath === "."
+            ? manifestPath
+            : this.resolveScopedPath(projectRootPath, manifestPath)
+        );
       }
     }
 
     for (const configPath of configs) {
-      if (await this.exists(path.join(this.rootPath, configPath))) {
-        existingConfigs.push(configPath);
+      if (await this.exists(path.join(projectRootPath, configPath))) {
+        existingConfigNames.push(configPath);
+        existingConfigPaths.push(
+          projectRelativePath === "."
+            ? configPath
+            : this.resolveScopedPath(projectRootPath, configPath)
+        );
       }
     }
 
-    const languages = this.detectLanguages(existingManifests, existingConfigs);
+    const languages = this.detectLanguages(existingManifestNames, existingConfigNames);
 
     return {
-      packageManager: this.detectPackageManager(existingManifests),
-      manifests: existingManifests,
-      configs: existingConfigs,
+      packageManager: this.detectPackageManager(existingManifestNames),
+      manifests: existingManifestPaths,
+      configs: existingConfigPaths,
       languages
     };
   }
@@ -205,11 +289,18 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     return Array.from(languages);
   }
 
-  private buildNotes(repository: ProjectContext["repository"]): string[] {
+  private buildNotes(
+    repository: ProjectContext["repository"],
+    projectRelativePath: string
+  ): string[] {
     const notes = [
       "Human approval is treated as a runtime concern.",
       "Governance and bootstrap context stay separate."
     ];
+
+    if (projectRelativePath !== ".") {
+      notes.push(`Project context is scoped to ${projectRelativePath}.`);
+    }
 
     if (repository.isGitRepo) {
       if (repository.isDirty) {
@@ -240,10 +331,10 @@ export class FilesystemProjectAdapter implements ProjectAdapterPort {
     return Array.from(new Set(values.filter((value) => value.length > 0)));
   }
 
-  private async runGit(args: string[]): Promise<string | null> {
+  private async runGit(args: string[], cwd: string): Promise<string | null> {
     try {
       const { stdout } = await execFileAsync("git", args, {
-        cwd: this.rootPath
+        cwd
       });
 
       return stdout.trimEnd();

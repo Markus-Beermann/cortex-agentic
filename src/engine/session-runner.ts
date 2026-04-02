@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { ProjectAdapterPort } from "../adapters/projects/project-adapter.port";
 import type { ProviderPort } from "../adapters/providers/provider.port";
@@ -6,6 +8,8 @@ import type {
   ApprovalRequest,
   ApprovalMode,
   Output,
+  ProjectContext,
+  ProviderRequest,
   ProviderResponse,
   RegistryEntry,
   RunState,
@@ -180,30 +184,41 @@ export class SessionRunner {
       roleId: task.requestedRole
     });
 
-    const projectContext = await this.dependencies.projectAdapter.loadContext(run.projectId);
-    const completedTasks = await Promise.all(
-      run.completedTaskIds.map((completedTaskId) =>
-        this.dependencies.taskStore.get(completedTaskId)
-      )
-    );
-    const completedOutputs = await this.dependencies.outputStore.getMany(run.outputIds);
-    const providerRequest = buildProviderRequest({
-      providerId: this.dependencies.provider.id,
-      projectContext,
-      role: registryEntry,
-      run: runningRun,
-      task,
-      completedTasks,
-      completedOutputs,
-      handoffApprovalMode: this.resolveHandoffApprovalMode(task.requestedRole)
-    });
-    const providerResponse: ProviderResponse = validateProviderResponse(
-      await this.dependencies.provider.execute(providerRequest)
-    );
-    const output = this.applyHandoffApprovalModeOverride(
-      validateOutput(providerResponse.output),
-      task.requestedRole
-    );
+    let projectContext!: ProjectContext;
+    let providerRequest!: ProviderRequest;
+    let providerResponse!: ProviderResponse;
+    let output!: Output;
+    let materializedArtifactPaths!: string[];
+
+    try {
+      projectContext = await this.dependencies.projectAdapter.loadContext(run.projectId);
+      const completedTasks = await Promise.all(
+        run.completedTaskIds.map((completedTaskId) =>
+          this.dependencies.taskStore.get(completedTaskId)
+        )
+      );
+      const completedOutputs = await this.dependencies.outputStore.getMany(run.outputIds);
+      providerRequest = buildProviderRequest({
+        providerId: this.dependencies.provider.id,
+        projectContext,
+        role: registryEntry,
+        run: runningRun,
+        task,
+        completedTasks,
+        completedOutputs,
+        handoffApprovalMode: this.resolveHandoffApprovalMode(task.requestedRole)
+      });
+      providerResponse = validateProviderResponse(
+        await this.dependencies.provider.execute(providerRequest)
+      );
+      output = this.applyHandoffApprovalModeOverride(
+        validateOutput(providerResponse.output),
+        task.requestedRole
+      );
+      materializedArtifactPaths = await this.materializeFileArtifacts(output, projectContext);
+    } catch (error) {
+      return this.failTaskExecution(runningRun, task, error);
+    }
 
     const completedTask: Task = {
       ...task,
@@ -227,6 +242,14 @@ export class SessionRunner {
       contextPurpose: providerRequest.selectedContext.purpose,
       diagnostics: providerResponse.diagnostics
     });
+    for (const artifactPath of materializedArtifactPaths) {
+      await this.dependencies.eventLogStore.append(run.id, "artifact.materialized", {
+        taskId: task.id,
+        outputId: output.id,
+        roleId: task.requestedRole,
+        path: artifactPath
+      });
+    }
 
     let nextRun: RunState = {
       ...runningRun,
@@ -442,7 +465,7 @@ export class SessionRunner {
       inputContext: ["Goal received by George."],
       acceptanceCriteria: [
         "Classify the goal.",
-        "Route the next role explicitly."
+        "Route the next role or complete the run explicitly."
       ],
       status: "queued",
       approvalMode: input.approvalMode,
@@ -566,6 +589,81 @@ export class SessionRunner {
     };
 
     return this.dependencies.approvalRequestStore.save(approvalRequest);
+  }
+
+  private async materializeFileArtifacts(
+    output: Output,
+    projectContext: ProjectContext
+  ): Promise<string[]> {
+    const fileArtifacts = output.artifacts.filter((artifact) => artifact.kind === "file");
+    const materializedPaths: string[] = [];
+
+    for (const artifact of fileArtifacts) {
+      if (!artifact.path) {
+        throw new Error(`Output ${output.id} returned a file artifact without a path.`);
+      }
+
+      const resolvedPath = this.resolveArtifactPath(projectContext.rootPath, artifact.path);
+      await mkdir(path.dirname(resolvedPath), { recursive: true });
+      await writeFile(resolvedPath, artifact.content, "utf8");
+      materializedPaths.push(artifact.path);
+    }
+
+    return materializedPaths;
+  }
+
+  private resolveArtifactPath(projectRootPath: string, artifactPath: string): string {
+    if (path.isAbsolute(artifactPath)) {
+      throw new Error(`File artifact path "${artifactPath}" must be project-relative.`);
+    }
+
+    const resolvedPath = path.resolve(projectRootPath, artifactPath);
+    const relativePath = path.relative(projectRootPath, resolvedPath);
+
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+      throw new Error(`File artifact path "${artifactPath}" escapes the project root.`);
+    }
+
+    return resolvedPath;
+  }
+
+  private async failTaskExecution(
+    runningRun: RunState,
+    task: Task,
+    error: unknown
+  ): Promise<StepResult> {
+    const timestamp = nowIso();
+    const reason = error instanceof Error ? error.message : String(error);
+    const failedTask: Task = {
+      ...task,
+      status: "failed",
+      updatedAt: timestamp
+    };
+    const failedRun: RunState = {
+      ...runningRun,
+      status: "failed",
+      activeTaskId: null,
+      updatedAt: timestamp
+    };
+
+    await this.dependencies.taskStore.save(failedTask);
+    await this.dependencies.runStateStore.save(failedRun);
+    await this.dependencies.eventLogStore.append(runningRun.id, "task.failed", {
+      taskId: task.id,
+      roleId: task.requestedRole,
+      reason
+    });
+
+    return {
+      run: failedRun,
+      output: null,
+      continued: false,
+      policyDecision: {
+        status: "blocked",
+        reason
+      },
+      approvalRequest: null
+    };
   }
 
   private resolveHandoffApprovalMode(roleId: Task["requestedRole"]): ApprovalMode {

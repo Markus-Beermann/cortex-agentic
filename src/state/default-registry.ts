@@ -11,7 +11,7 @@ export function createDefaultRegistry(): RegistryEntry[] {
       displayName: "George",
       bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
       capabilities: ["run setup", "routing", "stop decisions"],
-      allowedHandoffs: ["architect"]
+      allowedHandoffs: ["architect", "implementer", "reviewer"]
     },
     {
       id: "role/architect",

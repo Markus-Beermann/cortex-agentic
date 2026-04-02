@@ -7,6 +7,83 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function containsAny(value: string, patterns: string[]): boolean {
+  return patterns.some((pattern) => value.includes(pattern));
+}
+
+function isSimpleContentGoal(goal: string): boolean {
+  const normalizedGoal = goal.toLowerCase();
+  const contentKeywords = [
+    "article",
+    "artikel",
+    "blog",
+    "post",
+    "essay",
+    "summary",
+    "documentation",
+    "document",
+    "write",
+    "schreibe"
+  ];
+  const engineeringKeywords = [
+    "api",
+    "service",
+    "microservice",
+    "refactor",
+    "migrate",
+    "bug",
+    "fix",
+    "debug",
+    "port",
+    "engine",
+    "typescript",
+    "javascript",
+    "python",
+    "database"
+  ];
+
+  return containsAny(normalizedGoal, contentKeywords) && !containsAny(normalizedGoal, engineeringKeywords);
+}
+
+function deriveTopic(goal: string): string {
+  const normalizedGoal = goal.trim();
+  const aboutMatch = normalizedGoal.match(/(?:about|über)\s+(.+)$/iu);
+
+  if (aboutMatch?.[1]) {
+    return aboutMatch[1].trim().replace(/[.?!]+$/u, "");
+  }
+
+  return "the requested topic";
+}
+
+function deriveArticlePath(goal: string): string {
+  return goal.toLowerCase().includes("artikel") ? "artikel.md" : "article.md";
+}
+
+function buildArticleContent(goal: string): string {
+  const topic = deriveTopic(goal);
+  const title =
+    topic === "the requested topic"
+      ? "Requested Article"
+      : `Article about ${topic.charAt(0).toUpperCase()}${topic.slice(1)}`;
+
+  return [
+    `# ${title}`,
+    "",
+    `This short article covers ${topic} in a form that can be reviewed without pretending a four-agent ceremony was necessary.`,
+    "",
+    `The first reference is [Wikipedia](https://en.wikipedia.org/wiki/${encodeURIComponent(topic.replace(/\s+/gu, "_"))}), which is at least a stable starting point instead of pure invention.`,
+    `A second source is [MDN Web Docs](https://developer.mozilla.org/), useful when the topic touches implementation details or web-facing examples.`,
+    `A third reference is [OpenAI documentation](https://platform.openai.com/docs), which is handy whenever the topic overlaps with agent workflows, structured outputs, or orchestration patterns.`,
+    "",
+    "## Summary",
+    "",
+    `- The task was treated as a bounded writing job about ${topic}.`,
+    "- The deliverable is intentionally simple and file-based.",
+    "- Review can be skipped because the output is directly inspectable on disk."
+  ].join("\n");
+}
+
 export class NoopProviderAdapter implements ProviderPort {
   public readonly id = "noop";
   public readonly version = "v1" as const;
@@ -55,6 +132,38 @@ export class NoopProviderAdapter implements ProviderPort {
   ): Output {
     switch (task.requestedRole) {
       case "coordinator":
+        if (isSimpleContentGoal(task.objective)) {
+          return {
+            id: randomUUID(),
+            taskId: task.id,
+            roleId: "coordinator",
+            summary: `${personaName} classified the goal "${task.objective}" as a bounded content task and skipped architecture work.`,
+            decisions: [
+              "The goal is simple enough for direct execution.",
+              "A separate review hop is unnecessary because the deliverable can be inspected on disk."
+            ],
+            blockers: [],
+            artifacts: [],
+            nextAction: this.createHandoff(
+              "implementer",
+              "Write the requested article",
+              task.objective,
+              [
+                "Create the requested article as a Markdown file.",
+                "Include three links in the article body.",
+                "Keep the deliverable project-relative and ready for immediate inspection."
+              ],
+              [
+                `Original goal: ${task.objective}`,
+                `Project root: ${projectContext.rootPath}`
+              ],
+              "The task is already bounded and does not need a separate architecture pass.",
+              handoffApprovalMode
+            ),
+            createdAt: timestamp
+          };
+        }
+
         return {
           id: randomUUID(),
           taskId: task.id,
@@ -119,6 +228,32 @@ export class NoopProviderAdapter implements ProviderPort {
           createdAt: timestamp
         };
       case "implementer":
+        if (isSimpleContentGoal(task.objective)) {
+          return {
+            id: randomUUID(),
+            taskId: task.id,
+            roleId: "implementer",
+            summary: `${personaName} wrote the requested article directly into the sandbox project.`,
+            decisions: [
+              "The task was treated as a bounded writing deliverable.",
+              `The file was prepared relative to ${projectContext.rootPath}.`
+            ],
+            blockers: [],
+            artifacts: [
+              {
+                kind: "file",
+                path: deriveArticlePath(task.objective),
+                content: buildArticleContent(task.objective),
+                note: "Materialize this Markdown file inside the selected project root."
+              }
+            ],
+            nextAction: {
+              kind: "complete"
+            },
+            createdAt: timestamp
+          };
+        }
+
         return {
           id: randomUUID(),
           taskId: task.id,

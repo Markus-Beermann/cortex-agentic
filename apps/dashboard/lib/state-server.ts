@@ -277,7 +277,7 @@ export async function cancelRun(runId: string): Promise<RunState> {
   );
 }
 
-export async function createRun(goal: string, projectId = "remote"): Promise<RunState> {
+export async function createRun(goal: string, projectId = "sandbox"): Promise<RunState> {
   return normalizeRunState(
     await requestJson("/runs", { method: "POST", body: { goal, projectId } })
   );

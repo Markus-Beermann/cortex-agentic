@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (typeof body.goal !== "string" || body.goal.trim().length === 0) {
       return NextResponse.json({ error: "goal is required" }, { status: 400 });
     }
-    const projectId = typeof body.projectId === "string" ? body.projectId : "remote";
+    const projectId = typeof body.projectId === "string" ? body.projectId : "sandbox";
     const run = await createRun(body.goal.trim(), projectId);
     return NextResponse.json(run, { status: 201 });
   } catch (error) {

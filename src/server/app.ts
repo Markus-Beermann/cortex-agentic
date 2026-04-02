@@ -143,7 +143,7 @@ app.post("/runs", async (req, res) => {
       res.status(400).json({ error: "goal is required" });
       return;
     }
-    const projectId = typeof body.projectId === "string" ? body.projectId : "remote";
+    const projectId = typeof body.projectId === "string" ? body.projectId : "sandbox";
     const run = await pgCreatePendingRun(getPool(), body.goal.trim(), projectId);
     res.status(201).json(run);
   } catch (err) {

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -28,5 +28,37 @@ describe("RegistryStore", () => {
 
     expect(personaEntry?.roleId).toBe("architect");
     expect(aliasEntry?.roleId).toBe("coordinator");
+  });
+
+  it("merges seeded role updates into an existing registry file", async () => {
+    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-registry-"));
+    temporaryDirectories.push(rootPath);
+
+    await mkdir(path.join(rootPath, ".orchestrator"), { recursive: true });
+    await writeFile(
+      path.join(rootPath, ".orchestrator", "registry.json"),
+      JSON.stringify([
+        {
+          id: "role/coordinator",
+          roleId: "coordinator",
+          technicalName: "Coordinator",
+          personaName: "George",
+          aliases: ["George Senior"],
+          displayName: "George",
+          bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
+          capabilities: ["run setup"],
+          allowedHandoffs: ["architect"]
+        }
+      ], null, 2),
+      "utf8"
+    );
+
+    const registryStore = new RegistryStore(rootPath);
+    const seededEntries = await registryStore.seed(createDefaultRegistry());
+    const coordinatorEntry = seededEntries.find((entry) => entry.roleId === "coordinator");
+
+    expect(coordinatorEntry?.allowedHandoffs).toContain("architect");
+    expect(coordinatorEntry?.allowedHandoffs).toContain("implementer");
+    expect(coordinatorEntry?.allowedHandoffs).toContain("reviewer");
   });
 });

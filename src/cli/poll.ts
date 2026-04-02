@@ -106,7 +106,7 @@ async function main(): Promise<void> {
 
       const finalRun = await loop.runGoal(
         {
-          projectId: projectId ?? path.basename(rootPath),
+          projectId: projectId ?? "sandbox",
           goal
         },
         8

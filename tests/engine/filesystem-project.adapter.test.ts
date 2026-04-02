@@ -73,4 +73,42 @@ describe("FilesystemProjectAdapter", () => {
     expect(projectContext.contexts.reviewContext.focusPaths).toContain("draft.txt");
     expect(projectContext.runtimePath).toBe(path.join(rootPath, ".orchestrator"));
   });
+
+  it("resolves sandbox project roots without moving runtime state out of the workspace", async () => {
+    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-project-"));
+    temporaryDirectories.push(rootPath);
+
+    await mkdir(path.join(rootPath, "docs", "agent-context"), { recursive: true });
+    await mkdir(path.join(rootPath, "sandbox"), { recursive: true });
+    await writeFile(path.join(rootPath, "AGENTS.md"), "# rules\n", "utf8");
+    await writeFile(
+      path.join(rootPath, "docs", "MASTER_Agent_Rules.md"),
+      "# master rules\n",
+      "utf8"
+    );
+    await writeFile(
+      path.join(rootPath, "docs", "agent-context", "agent-bootstrap-index.md"),
+      "# bootstraps\n",
+      "utf8"
+    );
+    await writeFile(path.join(rootPath, "package.json"), "{}\n", "utf8");
+    await writeFile(path.join(rootPath, "sandbox", "package.json"), "{}\n", "utf8");
+    await execFileAsync("git", ["init", "-b", "main"], { cwd: rootPath });
+    await execFileAsync("git", ["add", "."], { cwd: rootPath });
+    await execFileAsync(
+      "git",
+      ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"],
+      { cwd: rootPath }
+    );
+    await writeFile(path.join(rootPath, "sandbox", "draft.txt"), "sandbox only\n", "utf8");
+
+    const adapter = new FilesystemProjectAdapter(rootPath);
+    const projectContext = await adapter.loadContext("sandbox");
+
+    expect(projectContext.rootPath).toBe(path.join(rootPath, "sandbox"));
+    expect(projectContext.runtimePath).toBe(path.join(rootPath, ".orchestrator"));
+    expect(projectContext.stack.manifests).toContain("sandbox/package.json");
+    expect(projectContext.repository.untrackedFiles).toContain("sandbox/draft.txt");
+    expect(projectContext.notes).toContain("Project context is scoped to sandbox.");
+  });
 });

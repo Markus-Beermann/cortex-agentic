@@ -12,21 +12,27 @@ export class RegistryStore {
   }
 
   public async seed(entries: RegistryEntry[]): Promise<RegistryEntry[]> {
+    const seededEntries = entries.map(validateRegistryEntry);
     const existing = await readJsonFileIfExists<RegistryEntry[]>(this.filePath);
 
     if (existing !== null) {
       try {
-        return existing.map(validateRegistryEntry);
+        const validatedExistingEntries = existing.map(validateRegistryEntry);
+        const mergedEntries = this.mergeEntries(validatedExistingEntries, seededEntries);
+
+        if (JSON.stringify(validatedExistingEntries) !== JSON.stringify(mergedEntries)) {
+          await writeJsonFile(this.filePath, mergedEntries);
+        }
+
+        return mergedEntries;
       } catch {
-        const validatedEntries = entries.map(validateRegistryEntry);
-        await writeJsonFile(this.filePath, validatedEntries);
-        return validatedEntries;
+        await writeJsonFile(this.filePath, seededEntries);
+        return seededEntries;
       }
     }
 
-    const validatedEntries = entries.map(validateRegistryEntry);
-    await writeJsonFile(this.filePath, validatedEntries);
-    return validatedEntries;
+    await writeJsonFile(this.filePath, seededEntries);
+    return seededEntries;
   }
 
   public async list(): Promise<RegistryEntry[]> {
@@ -61,5 +67,38 @@ export class RegistryStore {
 
   private normalize(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  private mergeEntries(
+    existingEntries: RegistryEntry[],
+    seededEntries: RegistryEntry[]
+  ): RegistryEntry[] {
+    const seededEntriesByRole = new Map(seededEntries.map((entry) => [entry.roleId, entry]));
+    const mergedEntries = existingEntries.map((entry) => {
+      const seededEntry = seededEntriesByRole.get(entry.roleId);
+
+      if (!seededEntry) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        aliases: this.unique([...entry.aliases, ...seededEntry.aliases]),
+        capabilities: this.unique([...entry.capabilities, ...seededEntry.capabilities]),
+        allowedHandoffs: this.unique([...entry.allowedHandoffs, ...seededEntry.allowedHandoffs])
+      };
+    });
+
+    for (const seededEntry of seededEntries) {
+      if (!mergedEntries.some((entry) => entry.roleId === seededEntry.roleId)) {
+        mergedEntries.push(seededEntry);
+      }
+    }
+
+    return mergedEntries;
+  }
+
+  private unique<T extends string>(values: T[]): T[] {
+    return Array.from(new Set(values));
   }
 }

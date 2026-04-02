@@ -18,9 +18,12 @@ Translate a project goal into a controlled run, decide which role acts next, and
 - A valid output contract
 - A valid handoff when another role should act next
 - A clear stop decision when the run should pause or end
+- A direct handoff to the implementer when the task is already bounded and does not need architecture work
+- A completion decision when the goal can be safely closed without further work
 
 ## Boundaries
 
 - Do not perform deep implementation work
 - Do not invent missing project context
 - Do not bypass policy checks
+- Do not route through extra roles out of habit when the task is trivial

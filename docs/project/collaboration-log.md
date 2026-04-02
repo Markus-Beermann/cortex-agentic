@@ -31,3 +31,11 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Deployed dashboard to Vercel; live at `cortex-agentic-git-main-markus-beermanns-projects.vercel.app`.
 - Added agent thread bootstrap prompts for Tony and Sigmund under `docs/agent-context/`.
 - First milestone where Markus can see live orchestration runs in a browser without terminal access.
+
+## 2026-04-02
+
+- Fixed Phase 7 engine gap where `kind: "file"` artifacts existed only in output JSON; implementer file artifacts are now materialized into the selected project root.
+- Scoped `projectId` to real workspace subdirectories such as `sandbox/` instead of treating it as a label with delusions of grandeur.
+- Opened coordinator routing so trivial work can skip architecture and/or review instead of forcing every run through all four roles.
+- Updated noop-provider heuristics and engine tests so a simple article request can complete in `sandbox/` with a real Markdown file on disk.
+- Aligned server, dashboard, and poll defaults around `sandbox` for disposable engine testing.

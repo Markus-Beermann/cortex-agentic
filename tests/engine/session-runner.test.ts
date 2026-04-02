@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -29,22 +29,25 @@ async function createRunner(
   runner: SessionRunner;
   approvalRequestStore: ApprovalRequestStore;
   eventLogStore: EventLogStore;
+  taskStore: TaskStore;
 }> {
   const registryStore = new RegistryStore(rootPath);
   await registryStore.seed(createDefaultRegistry());
 
   const approvalRequestStore = new ApprovalRequestStore(rootPath);
   const eventLogStore = new EventLogStore(rootPath);
+  const taskStore = new TaskStore(rootPath);
 
   return {
     approvalRequestStore,
     eventLogStore,
+    taskStore,
     runner: new SessionRunner({
       provider: new NoopProviderAdapter(),
       projectAdapter: new FilesystemProjectAdapter(rootPath),
       policy: new DefaultExecutionPolicy(),
       registryStore,
-      taskStore: new TaskStore(rootPath),
+      taskStore,
       outputStore: new OutputStore(rootPath),
       handoffStore: new HandoffStore(rootPath),
       approvalRequestStore,
@@ -55,6 +58,19 @@ async function createRunner(
   };
 }
 
+async function createWorkspaceRoot(): Promise<string> {
+  const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
+  temporaryDirectories.push(rootPath);
+
+  await mkdir(path.join(rootPath, "sandbox"), { recursive: true });
+  await writeFile(path.join(rootPath, "AGENTS.md"), "# rules\n", "utf8");
+  await writeFile(path.join(rootPath, "package.json"), "{}\n", "utf8");
+  await writeFile(path.join(rootPath, "sandbox", "README.md"), "# Sandbox\n", "utf8");
+  await writeFile(path.join(rootPath, "sandbox", "package.json"), "{}\n", "utf8");
+
+  return rootPath;
+}
+
 describe("SessionRunner", () => {
   afterEach(async () => {
     for (const directoryPath of temporaryDirectories.splice(0)) {
@@ -63,12 +79,11 @@ describe("SessionRunner", () => {
   });
 
   it("completes the deterministic dry-run flow", async () => {
-    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
-    temporaryDirectories.push(rootPath);
+    const rootPath = await createWorkspaceRoot();
 
     const { runner, eventLogStore } = await createRunner(rootPath);
     const run = await runner.initializeRun({
-      projectId: "demo-project",
+      projectId: "sandbox",
       goal: "Build the first orchestration slice."
     });
 
@@ -89,13 +104,36 @@ describe("SessionRunner", () => {
     ).toBe(true);
   });
 
+  it("writes implementer file artifacts into the sandbox project and completes without review for simple article work", async () => {
+    const rootPath = await createWorkspaceRoot();
+
+    const { runner, eventLogStore, taskStore } = await createRunner(rootPath);
+    const run = await runner.initializeRun({
+      projectId: "sandbox",
+      goal: "Schreibe einen mit 3 Links belegten Artikel über Multi-Agenten-Orchestrierung."
+    });
+
+    const completedRun = await runner.runUntilStable(run.id, 8);
+    const tasks = await taskStore.listByRun(run.id);
+    const articlePath = path.join(rootPath, "sandbox", "artikel.md");
+    const articleContent = await readFile(articlePath, "utf8");
+    const events = await eventLogStore.list(run.id);
+
+    expect(completedRun.status).toBe("completed");
+    expect(completedRun.completedTaskIds).toHaveLength(2);
+    expect(completedRun.outputIds).toHaveLength(2);
+    expect(tasks.map((task) => task.requestedRole)).toEqual(["coordinator", "implementer"]);
+    expect(articleContent).toContain("# Article about Multi-Agenten-Orchestrierung");
+    expect(articleContent.match(/\[.+?\]\(https?:\/\/.+?\)/gmu)).toHaveLength(3);
+    expect(events.some((event) => event.eventType === "artifact.materialized")).toBe(true);
+  });
+
   it("stops at the approval gate when the root task requires approval", async () => {
-    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
-    temporaryDirectories.push(rootPath);
+    const rootPath = await createWorkspaceRoot();
 
     const { runner, approvalRequestStore } = await createRunner(rootPath);
     const run = await runner.initializeRun({
-      projectId: "demo-project",
+      projectId: "sandbox",
       goal: "Pause for approval before any execution.",
       approvalMode: "needs-approval"
     });
@@ -113,12 +151,11 @@ describe("SessionRunner", () => {
   });
 
   it("approves a blocked root task and resumes the run", async () => {
-    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
-    temporaryDirectories.push(rootPath);
+    const rootPath = await createWorkspaceRoot();
 
     const { runner, approvalRequestStore } = await createRunner(rootPath);
     const run = await runner.initializeRun({
-      projectId: "demo-project",
+      projectId: "sandbox",
       goal: "Pause for approval before any execution.",
       approvalMode: "needs-approval"
     });
@@ -139,12 +176,11 @@ describe("SessionRunner", () => {
   });
 
   it("rejects a pending approval and fails the run", async () => {
-    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
-    temporaryDirectories.push(rootPath);
+    const rootPath = await createWorkspaceRoot();
 
     const { runner, approvalRequestStore } = await createRunner(rootPath);
     const run = await runner.initializeRun({
-      projectId: "demo-project",
+      projectId: "sandbox",
       goal: "Pause for approval before any execution.",
       approvalMode: "needs-approval"
     });
@@ -163,8 +199,7 @@ describe("SessionRunner", () => {
   });
 
   it("waits for approval on a handoff and resumes after approval", async () => {
-    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-runner-"));
-    temporaryDirectories.push(rootPath);
+    const rootPath = await createWorkspaceRoot();
 
     const { runner, approvalRequestStore } = await createRunner(rootPath, {
       handoffApprovalModeByRole: {
@@ -173,7 +208,7 @@ describe("SessionRunner", () => {
     });
 
     const run = await runner.initializeRun({
-      projectId: "demo-project",
+      projectId: "sandbox",
       goal: "Pause on the first handoff."
     });
 

@@ -28,7 +28,7 @@ export function RunListScreen() {
   const [snapshot, setSnapshot] = useState<RunsSnapshot>(INITIAL_SNAPSHOT);
   const [showModal, setShowModal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
-  const [projectInput, setProjectInput] = useState("remote");
+  const [projectInput, setProjectInput] = useState("sandbox");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const goalRef = useRef<HTMLTextAreaElement>(null);
@@ -71,7 +71,7 @@ export function RunListScreen() {
 
   const openModal = useCallback(() => {
     setGoalInput("");
-    setProjectInput("remote");
+    setProjectInput("sandbox");
     setSubmitError(null);
     setShowModal(true);
     setTimeout(() => goalRef.current?.focus(), 60);
@@ -89,7 +89,7 @@ export function RunListScreen() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await sendJson("/api/runs", "POST", { goal, projectId: projectInput.trim() || "remote" });
+      await sendJson("/api/runs", "POST", { goal, projectId: projectInput.trim() || "sandbox" });
       setShowModal(false);
       void loadRuns();
     } catch (error) {
@@ -222,7 +222,7 @@ export function RunListScreen() {
               className="modal-input"
               value={projectInput}
               onChange={(e) => setProjectInput(e.target.value)}
-              placeholder="remote"
+              placeholder="sandbox"
               disabled={isSubmitting}
             />
             {submitError ? (
