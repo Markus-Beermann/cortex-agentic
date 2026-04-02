@@ -39,6 +39,16 @@ function readNumber(payload: Record<string, unknown>, key: string): number | nul
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function readStringList(payload: Record<string, unknown>, key: string): string[] {
+  const value = payload[key];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+}
+
 export function formatShortId(id: string): string {
   return id.length > 8 ? id.slice(0, 8) : id;
 }
@@ -99,6 +109,8 @@ export function formatEventLabel(event: RunEvent): string {
       return "Task completed";
     case "provider.executed":
       return `${titleCase(readString(payload, "providerId") ?? "provider")} executed`;
+    case "routing.profile_selected":
+      return "Coordinator routing profile selected";
     case "handoff.created":
       return `Handoff to ${roleLabel(payload.toRole)}`;
     case "run.completed":
@@ -132,6 +144,28 @@ export function formatEventDetails(event: RunEvent): string {
       ]
         .filter(Boolean)
         .join(" · ");
+    case "routing.profile_selected": {
+      const summary = [
+        readString(payload, "workType"),
+        readString(payload, "complexity"),
+        readString(payload, "routingStrategy"),
+        readString(payload, "reviewMode")
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const rationale = readStringList(payload, "rationale").join(" ");
+      const targetRole = readString(payload, "targetRole");
+      const nextActionKind = readString(payload, "nextActionKind");
+
+      return [
+        summary,
+        rationale,
+        targetRole ? `Next role: ${roleLabel(targetRole)}.` : null,
+        nextActionKind ? `Next action: ${titleCase(nextActionKind)}.` : null
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
     case "handoff.created":
       return `Next role ${roleLabel(payload.toRole)}${
         readString(payload, "nextTaskId")

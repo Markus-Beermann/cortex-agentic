@@ -242,6 +242,19 @@ export class SessionRunner {
       contextPurpose: providerRequest.selectedContext.purpose,
       diagnostics: providerResponse.diagnostics
     });
+    if (task.requestedRole === "coordinator") {
+      await this.dependencies.eventLogStore.append(run.id, "routing.profile_selected", {
+        taskId: task.id,
+        roleId: task.requestedRole,
+        workType: providerRequest.executionProfile.workType,
+        complexity: providerRequest.executionProfile.complexity,
+        routingStrategy: providerRequest.executionProfile.routingStrategy,
+        reviewMode: providerRequest.executionProfile.reviewMode,
+        rationale: providerRequest.executionProfile.rationale,
+        nextActionKind: output.nextAction.kind,
+        targetRole: output.nextAction.kind === "handoff" ? output.nextAction.targetRole : null
+      });
+    }
     for (const artifactPath of materializedArtifactPaths) {
       await this.dependencies.eventLogStore.append(run.id, "artifact.materialized", {
         taskId: task.id,

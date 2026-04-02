@@ -119,6 +119,40 @@ function createProviderRequest(): ProviderRequest {
   };
 }
 
+function createCoordinatorRequest(): ProviderRequest {
+  return {
+    ...createProviderRequest(),
+    roleId: "coordinator",
+    technicalName: "Coordinator",
+    personaName: "George",
+    displayName: "George",
+    bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
+    capabilities: ["routing"],
+    allowedHandoffs: ["architect", "implementer", "reviewer"],
+    selectedContext: {
+      purpose: "planning",
+      summary: "Focus on routing the run safely.",
+      focusPaths: ["README.md"],
+      relevantDocuments: ["docs/architecture/orchestrator-architecture.md"],
+      notes: []
+    },
+    executionProfile: {
+      workType: "content",
+      complexity: "simple",
+      routingStrategy: "direct-implementer",
+      reviewMode: "skip-review",
+      rationale: ["The goal is a bounded content task."]
+    },
+    task: {
+      ...createProviderRequest().task,
+      id: "task-coordinator",
+      title: "Coordinate the incoming goal",
+      objective: "Classify the task and route the next role.",
+      requestedRole: "coordinator"
+    }
+  };
+}
+
 describe("PromptBuilder", () => {
   afterEach(async () => {
     for (const directoryPath of temporaryDirectories.splice(0)) {
@@ -147,5 +181,25 @@ describe("PromptBuilder", () => {
     expect(prompt.systemPrompt).toContain("Routing strategy: plan-then-implement");
     expect(prompt.systemPrompt).toContain('If you hand off, use approvalMode "needs-approval".');
     expect(prompt.userPrompt).toContain('task "Design the implementation plan"');
+  });
+
+  it("adds an explicit routing directive for coordinator prompts", async () => {
+    const rootPath = await mkdtemp(path.join(os.tmpdir(), "george-prompt-builder-"));
+    temporaryDirectories.push(rootPath);
+
+    const bootstrapPath = path.join(rootPath, "docs/agent-context/roles/coordinator.bootstrap.md");
+    await mkdir(path.dirname(bootstrapPath), { recursive: true });
+    await writeFile(
+      bootstrapPath,
+      "# Coordinator Bootstrap\n\nChoose the safest role path.\n",
+      "utf8"
+    );
+
+    const builder = new PromptBuilder(rootPath);
+    const prompt = await builder.build(createCoordinatorRequest());
+
+    expect(prompt.systemPrompt).toContain("COORDINATOR ROUTING DIRECTIVE");
+    expect(prompt.systemPrompt).toContain('The preferred routing strategy for this task is "direct-implementer".');
+    expect(prompt.systemPrompt).toContain('The preferred review mode for this task is "skip-review".');
   });
 });

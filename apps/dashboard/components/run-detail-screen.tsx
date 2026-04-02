@@ -46,10 +46,76 @@ const ROLE_LABELS: Record<string, string> = {
   reviewer: "Reviewer"
 };
 
+type RoutingProfile = {
+  complexity: string;
+  reviewMode: string;
+  routingStrategy: string;
+  targetRole: string | null;
+  workType: string;
+  rationale: string[];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readPayloadString(
+  payload: Record<string, unknown>,
+  key: string
+): string | null {
+  const value = payload[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readPayloadStringList(
+  payload: Record<string, unknown>,
+  key: string
+): string[] {
+  const value = payload[key];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+}
+
+function readRoutingProfile(events: RunEvent[]): RoutingProfile | null {
+  const routingEvent = [...events]
+    .reverse()
+    .find(
+      (event) => event.eventType === "routing.profile_selected" && isRecord(event.payload)
+    );
+
+  if (!routingEvent || !isRecord(routingEvent.payload)) {
+    return null;
+  }
+
+  const payload = routingEvent.payload;
+  const workType = readPayloadString(payload, "workType");
+  const complexity = readPayloadString(payload, "complexity");
+  const routingStrategy = readPayloadString(payload, "routingStrategy");
+  const reviewMode = readPayloadString(payload, "reviewMode");
+
+  if (!workType || !complexity || !routingStrategy || !reviewMode) {
+    return null;
+  }
+
+  return {
+    workType,
+    complexity,
+    routingStrategy,
+    reviewMode,
+    targetRole: readPayloadString(payload, "targetRole"),
+    rationale: readPayloadStringList(payload, "rationale")
+  };
+}
+
 export function RunDetailScreen({ runId }: RunDetailScreenProps) {
   const [snapshot, setSnapshot] = useState<RunDetailSnapshot>(INITIAL_SNAPSHOT);
   const [isCancelling, setIsCancelling] = useState(false);
   const shouldPoll = !snapshot.run || !isTerminalRunStatus(snapshot.run.status);
+  const routingProfile = readRoutingProfile(snapshot.events);
 
   const loadRunDetail = useEffectEvent(async () => {
     const [runResult, eventsResult, tasksResult, outputsResult] = await Promise.allSettled([
@@ -166,7 +232,37 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
                   <span className="meta-label">Outputs</span>
                   <p className="meta-value">{formatCount(snapshot.run.outputIds.length, "artifact")}</p>
                 </div>
+                {routingProfile ? (
+                  <div className="meta-card">
+                    <span className="meta-label">Routing</span>
+                    <p className="meta-value">{routingProfile.routingStrategy}</p>
+                  </div>
+                ) : null}
+                {routingProfile ? (
+                  <div className="meta-card">
+                    <span className="meta-label">Complexity</span>
+                    <p className="meta-value">{routingProfile.complexity}</p>
+                  </div>
+                ) : null}
+                {routingProfile ? (
+                  <div className="meta-card">
+                    <span className="meta-label">Review mode</span>
+                    <p className="meta-value">{routingProfile.reviewMode}</p>
+                  </div>
+                ) : null}
+                {routingProfile ? (
+                  <div className="meta-card">
+                    <span className="meta-label">Next role</span>
+                    <p className="meta-value">{routingProfile.targetRole ?? "complete"}</p>
+                  </div>
+                ) : null}
               </div>
+              {routingProfile ? (
+                <div className="notice-banner">
+                  <strong>Routing profile:</strong> {routingProfile.workType} work via{" "}
+                  {routingProfile.routingStrategy}. {routingProfile.rationale.join(" ")}
+                </div>
+              ) : null}
             </section>
 
             <section className="panel panel-content">

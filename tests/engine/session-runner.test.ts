@@ -95,6 +95,7 @@ describe("SessionRunner", () => {
 
     const events = await eventLogStore.list(run.id);
     expect(events.some((event) => event.eventType === "provider.executed")).toBe(true);
+    expect(events.some((event) => event.eventType === "routing.profile_selected")).toBe(true);
     expect(
       events.some(
         (event) =>
@@ -118,6 +119,7 @@ describe("SessionRunner", () => {
     const articlePath = path.join(rootPath, "sandbox", "artikel.md");
     const articleContent = await readFile(articlePath, "utf8");
     const events = await eventLogStore.list(run.id);
+    const routingEvent = events.find((event) => event.eventType === "routing.profile_selected");
 
     expect(completedRun.status).toBe("completed");
     expect(completedRun.completedTaskIds).toHaveLength(2);
@@ -126,6 +128,8 @@ describe("SessionRunner", () => {
     expect(articleContent).toContain("# Article about Multi-Agenten-Orchestrierung");
     expect(articleContent.match(/\[.+?\]\(https?:\/\/.+?\)/gmu)).toHaveLength(3);
     expect(events.some((event) => event.eventType === "artifact.materialized")).toBe(true);
+    expect(routingEvent?.payload.routingStrategy).toBe("direct-implementer");
+    expect(routingEvent?.payload.reviewMode).toBe("skip-review");
   });
 
   it("stops at the approval gate when the root task requires approval", async () => {

@@ -29,6 +29,21 @@ function formatCompletedWork(request: ProviderRequest): string {
     .join("\n");
 }
 
+function buildCoordinatorRoutingDirective(request: ProviderRequest): string[] {
+  if (request.roleId !== "coordinator") {
+    return [];
+  }
+
+  return [
+    "COORDINATOR ROUTING DIRECTIVE",
+    "You are responsible for choosing the narrowest safe role path for this run.",
+    `The preferred routing strategy for this task is "${request.executionProfile.routingStrategy}".`,
+    `The preferred review mode for this task is "${request.executionProfile.reviewMode}".`,
+    "Do not hand off to extra roles just because they exist.",
+    "If you deviate from the execution profile, explain why in decisions and rationale."
+  ];
+}
+
 function buildSystemPrompt(bootstrapContent: string, request: ProviderRequest): string {
   const selectedContext = request.selectedContext;
 
@@ -80,6 +95,8 @@ function buildSystemPrompt(bootstrapContent: string, request: ProviderRequest): 
     `If you hand off, use approvalMode "${request.handoffApprovalMode}".`,
     "Skip unnecessary roles when the task is already bounded and low-risk.",
     "",
+    ...buildCoordinatorRoutingDirective(request),
+    ...(request.roleId === "coordinator" ? [""] : []),
     "OUTPUT RULES",
     "Return only valid JSON with exactly these top-level fields:",
     '- "summary": string',

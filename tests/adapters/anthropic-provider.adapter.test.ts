@@ -192,6 +192,8 @@ describe("AnthropicProviderAdapter", () => {
     };
     expect(requestBody.model).toBe("claude-sonnet-4-6");
     expect(requestBody.system).toContain("Route work safely.");
+    expect(requestBody.system).toContain("COORDINATOR ROUTING DIRECTIVE");
+    expect(requestBody.system).toContain('The preferred routing strategy for this task is "plan-then-implement".');
     expect(requestBody.tool_choice).toEqual({
       type: "tool",
       name: "submit_output_contract"
