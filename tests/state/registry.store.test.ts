@@ -25,9 +25,11 @@ describe("RegistryStore", () => {
 
     const personaEntry = await registryStore.resolve("Michael Angelo");
     const aliasEntry = await registryStore.resolve("George Senior");
+    const hermesEntry = await registryStore.resolve("Hermes");
 
     expect(personaEntry?.roleId).toBe("architect");
     expect(aliasEntry?.roleId).toBe("coordinator");
+    expect(hermesEntry?.roleId).toBe("hermes");
   });
 
   it("merges seeded role updates into an existing registry file", async () => {
@@ -56,9 +58,11 @@ describe("RegistryStore", () => {
     const registryStore = new RegistryStore(rootPath);
     const seededEntries = await registryStore.seed(createDefaultRegistry());
     const coordinatorEntry = seededEntries.find((entry) => entry.roleId === "coordinator");
+    const hermesEntry = seededEntries.find((entry) => entry.roleId === "hermes");
 
     expect(coordinatorEntry?.allowedHandoffs).toContain("architect");
     expect(coordinatorEntry?.allowedHandoffs).toContain("implementer");
     expect(coordinatorEntry?.allowedHandoffs).toContain("reviewer");
+    expect(hermesEntry?.allowedHandoffs).toEqual([]);
   });
 });

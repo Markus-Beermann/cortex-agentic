@@ -53,5 +53,19 @@ export async function initSchema(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS outputs_task_id_idx ON outputs (task_id);
+
+    CREATE TABLE IF NOT EXISTS feed_items (
+      id           TEXT PRIMARY KEY,
+      source       TEXT NOT NULL,
+      event_type   TEXT NOT NULL,
+      content_json JSONB NOT NULL,
+      processed_at TIMESTAMPTZ,
+      created_at   TIMESTAMPTZ NOT NULL,
+      tags         TEXT[] NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS feed_items_source_idx ON feed_items (source);
+    CREATE INDEX IF NOT EXISTS feed_items_created_at_idx ON feed_items (created_at DESC);
+    CREATE INDEX IF NOT EXISTS feed_items_source_event_idx ON feed_items (source, event_type);
   `);
 }

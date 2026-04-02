@@ -14,6 +14,7 @@ import {
   pgListRuns,
   pgListTasks
 } from "./pg-queries";
+import { createHermesRuntime } from "../hermes/runtime";
 
 const ROOT_PATH = process.env.ORCHESTRATOR_ROOT ?? process.cwd();
 const DATABASE_PUBLIC_URL = process.env.DATABASE_PUBLIC_URL;
@@ -151,6 +152,40 @@ app.post("/runs", async (req, res) => {
   }
 });
 
+app.post("/hermes/nightly", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Hermes nightly requires database backend" });
+      return;
+    }
+
+    const configuredSecret = process.env.HERMES_CRON_SECRET;
+    if (!configuredSecret) {
+      res.status(503).json({ error: "HERMES_CRON_SECRET is not configured" });
+      return;
+    }
+
+    if (req.header("x-hermes-secret") !== configuredSecret) {
+      res.status(401).json({ error: "Unauthorized Hermes nightly trigger" });
+      return;
+    }
+
+    const body = req.body as {
+      summaryLookbackHours?: unknown;
+      githubLookbackHours?: unknown;
+    };
+    const runtime = createHermesRuntime(getPool());
+    const result = await runtime.createNightlyMailer().run({
+      summaryLookbackHours: parseOptionalPositiveInt(body.summaryLookbackHours),
+      githubLookbackHours: parseOptionalPositiveInt(body.githubLookbackHours)
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 function isNotFoundError(err: unknown): boolean {
   return (
     typeof err === "object" &&
@@ -158,4 +193,12 @@ function isNotFoundError(err: unknown): boolean {
     "code" in err &&
     (err as { code: unknown }).code === "ENOENT"
   );
+}
+
+function parseOptionalPositiveInt(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+
+  return Math.floor(value);
 }

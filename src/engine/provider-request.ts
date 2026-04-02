@@ -6,6 +6,7 @@ import type {
   Output,
   ProviderRequest,
   RegistryEntry,
+  RoleId,
   RunState,
   Task
 } from "../core/contracts";
@@ -36,7 +37,7 @@ function buildCompletedWork(
 export function buildProviderRequest(input: {
   providerId: string;
   projectContext: ProviderRequest["projectContext"];
-  role: RegistryEntry;
+  role: RegistryEntry & { roleId: RoleId };
   run: RunState;
   task: Task;
   completedTasks: Task[];

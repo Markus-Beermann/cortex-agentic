@@ -45,6 +45,17 @@ export function createDefaultRegistry(): RegistryEntry[] {
       bootstrapPath: "docs/agent-context/roles/reviewer.bootstrap.md",
       capabilities: ["validation", "completion", "corrective feedback"],
       allowedHandoffs: ["implementer"]
+    },
+    {
+      id: "role/hermes",
+      roleId: "hermes",
+      technicalName: "Monitoring Agent",
+      personaName: "Hermes",
+      aliases: ["Hermes Monitor"],
+      displayName: "Hermes",
+      bootstrapPath: "docs/agent-context/roles/hermes.bootstrap.md",
+      capabilities: ["github monitoring", "linkedin ingestion", "nightly summaries"],
+      allowedHandoffs: []
     }
   ];
 }

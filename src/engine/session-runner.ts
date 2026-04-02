@@ -12,6 +12,7 @@ import type {
   ProviderRequest,
   ProviderResponse,
   RegistryEntry,
+  RoleId,
   RunState,
   Task
 } from "../core/contracts";
@@ -490,12 +491,14 @@ export class SessionRunner {
     };
   }
 
-  private async loadRegistryEntry(roleId: RegistryEntry["roleId"]): Promise<RegistryEntry> {
+  private async loadRegistryEntry(roleId: RoleId): Promise<RegistryEntry & { roleId: RoleId }> {
     const entry = await this.dependencies.registryStore.getByRole(roleId);
 
     if (entry === null) {
       throw new Error(`Missing registry entry for role ${roleId}.`);
     }
+
+    assertOrchestrationRegistryEntry(entry);
 
     return entry;
   }
@@ -701,5 +704,13 @@ export class SessionRunner {
         approvalMode: this.resolveHandoffApprovalMode(roleId)
       }
     };
+  }
+}
+
+function assertOrchestrationRegistryEntry(
+  entry: RegistryEntry
+): asserts entry is RegistryEntry & { roleId: RoleId } {
+  if (entry.roleId === "hermes") {
+    throw new Error("Hermes is not a valid orchestration handoff role.");
   }
 }

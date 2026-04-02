@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { Handoff, Output, RegistryEntry, Task } from "../core/contracts";
+import type { Handoff, Output, RegistryEntry, RoleId, Task } from "../core/contracts";
 
 export interface RoutedHandoff {
   handoff: Handoff;
@@ -10,7 +10,7 @@ export interface RoutedHandoff {
 export function routeOutputToHandoff(params: {
   output: Output;
   currentTask: Task;
-  currentRole: RegistryEntry;
+  currentRole: RegistryEntry & { roleId: RoleId };
   createdAt: string;
 }): RoutedHandoff | null {
   const { output, currentTask, currentRole, createdAt } = params;
@@ -62,4 +62,3 @@ export function routeOutputToHandoff(params: {
 
   return { handoff, nextTask };
 }
-

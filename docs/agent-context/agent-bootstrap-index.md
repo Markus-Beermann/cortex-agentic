@@ -16,6 +16,11 @@ Stable rules are defined in `docs/MASTER_Agent_Rules.md`. These bootstrap files 
 - `Sigmund` is reserved as a future psychology or reflection specialist and is intentionally not part of the Phase 1 core registry.
 - `Sigmund` is expected to emit the `ReflectionReport` contract once a real reflection loop exists.
 
+## System Functions
+
+- `Hermes` is a private monitoring system function registered for discoverability, but intentionally outside the orchestration handoff graph.
+- `Hermes` bootstrap: `docs/agent-context/roles/hermes.bootstrap.md`
+
 ## Usage
 
 - Load the master rules first

@@ -81,6 +81,22 @@ describe("contracts", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts Hermes as a registry-only system agent without widening the core role graph", () => {
+    const result = RegistryEntrySchema.safeParse({
+      id: "role/hermes",
+      roleId: "hermes",
+      technicalName: "Monitoring Agent",
+      personaName: "Hermes",
+      aliases: ["Hermes Monitor"],
+      displayName: "Hermes",
+      bootstrapPath: "docs/agent-context/roles/hermes.bootstrap.md",
+      capabilities: ["github monitoring", "nightly summaries"],
+      allowedHandoffs: []
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a valid reflection report contract for Sigmund later", () => {
     const result = ReflectionReportSchema.safeParse({
       id: "reflection-1",
