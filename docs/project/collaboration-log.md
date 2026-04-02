@@ -42,3 +42,4 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added an explicit execution profile to provider requests so routing decisions are described as first-class context instead of living only inside provider heuristics.
 - Persisted the coordinator routing profile as a dedicated run event so the dashboard can show why a run went direct-to-implementer or through the full pipeline.
 - Surfaced the latest coordinator routing profile directly in the run detail overview so operators do not have to dig through the timeline for the decision summary.
+- Moved routing heuristics out of `provider-request.ts` into `DefaultExecutionPolicy`, so execution profiles are now engine policy instead of provider-request glue.

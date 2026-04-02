@@ -185,6 +185,7 @@ export class SessionRunner {
     });
 
     let projectContext!: ProjectContext;
+    let executionProfile!: ProviderRequest["executionProfile"];
     let providerRequest!: ProviderRequest;
     let providerResponse!: ProviderResponse;
     let output!: Output;
@@ -198,6 +199,7 @@ export class SessionRunner {
         )
       );
       const completedOutputs = await this.dependencies.outputStore.getMany(run.outputIds);
+      executionProfile = this.dependencies.policy.buildExecutionProfile(task, projectContext);
       providerRequest = buildProviderRequest({
         providerId: this.dependencies.provider.id,
         projectContext,
@@ -206,7 +208,8 @@ export class SessionRunner {
         task,
         completedTasks,
         completedOutputs,
-        handoffApprovalMode: this.resolveHandoffApprovalMode(task.requestedRole)
+        handoffApprovalMode: this.resolveHandoffApprovalMode(task.requestedRole),
+        executionProfile
       });
       providerResponse = validateProviderResponse(
         await this.dependencies.provider.execute(providerRequest)
@@ -246,11 +249,11 @@ export class SessionRunner {
       await this.dependencies.eventLogStore.append(run.id, "routing.profile_selected", {
         taskId: task.id,
         roleId: task.requestedRole,
-        workType: providerRequest.executionProfile.workType,
-        complexity: providerRequest.executionProfile.complexity,
-        routingStrategy: providerRequest.executionProfile.routingStrategy,
-        reviewMode: providerRequest.executionProfile.reviewMode,
-        rationale: providerRequest.executionProfile.rationale,
+        workType: executionProfile.workType,
+        complexity: executionProfile.complexity,
+        routingStrategy: executionProfile.routingStrategy,
+        reviewMode: executionProfile.reviewMode,
+        rationale: executionProfile.rationale,
         nextActionKind: output.nextAction.kind,
         targetRole: output.nextAction.kind === "handoff" ? output.nextAction.targetRole : null
       });
