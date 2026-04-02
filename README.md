@@ -12,6 +12,19 @@ George keeps a human owner in the loop. The human defines intent, reviews logic,
 - Engineers who need repeatable agent bootstraps, explicit task contracts, and controlled handoffs
 - Projects that want a semi-automatic orchestration core before adding provider adapters or public APIs
 
+## Current Status (Phase 6 complete)
+
+- Full run lifecycle: pending → running → completed/failed
+- PostgreSQL dual-write (Railway) — runs, tasks, outputs, events
+- Dashboard (Vercel): run list, run detail with agent outputs, cancel button, new run modal
+- PWA + Clerk Auth (mobile-first)
+- CLI: dry-run, poll, approve, reject, resume, run:list, run:inspect
+- Sandbox project (`sandbox/`) for engine testing — decoupled from YCSP
+
+**Open for Phase 7 (engine):**
+- `kind: "file"` artifacts not materialized to disk
+- Always 4 agents even for simple/non-code tasks
+
 ## Phase 1 Scope
 
 George currently provides:
@@ -65,7 +78,9 @@ npm run check
 
 `npm run events:show -- <run-id> --limit=20` shows event log entries for a specific run.
 
-`npm run dry-run` executes a deterministic orchestration pass using the built-in `noop` provider and writes run artifacts into `.orchestrator/`.
+`npm run dry-run` executes a deterministic orchestration pass using the built-in `noop` provider and writes run artifacts into `.orchestrator/`. Defaults to `--project=sandbox`.
+
+`npm run dry-run -- --project=my-project "My goal"` targets a specific project ID.
 
 `ANTHROPIC_API_KEY=... npm run dry-run -- --provider=anthropic` executes the same orchestration loop with the Anthropic provider against `claude-sonnet-4-6`, using `Zod` as the source of truth for the output schema.
 

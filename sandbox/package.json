@@ -1,0 +1,6 @@
+{
+  "name": "sandbox",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Throwaway test project for Cortex orchestrator runs. Safe to modify or delete."
+}

@@ -9,6 +9,7 @@ import { createCliSessionRunnerWithOptions } from "./runtime";
 
 interface DryRunOptions {
   goal: string;
+  projectId: string;
   providerId: CliProviderId;
   rootApprovalMode: ApprovalMode;
   handoffApprovalModeByRole: Partial<Record<RoleId, ApprovalMode>>;
@@ -25,6 +26,7 @@ function parseProvider(value: string): CliProviderId {
 function parseArguments(argv: string[]): DryRunOptions {
   const goalParts: string[] = [];
   let providerId: CliProviderId = "noop";
+  let projectId = "sandbox";
   let rootApprovalMode: ApprovalMode = "auto";
   const handoffApprovalModeByRole: Partial<Record<RoleId, ApprovalMode>> = {};
 
@@ -48,6 +50,23 @@ function parseArguments(argv: string[]): DryRunOptions {
       continue;
     }
 
+    if (argument?.startsWith("--project=")) {
+      projectId = argument.replace("--project=", "");
+      continue;
+    }
+
+    if (argument === "--project") {
+      const nextValue = argv[index + 1];
+
+      if (!nextValue) {
+        throw new Error("Missing value for --project.");
+      }
+
+      projectId = nextValue;
+      index += 1;
+      continue;
+    }
+
     if (argument === "--root-approval") {
       rootApprovalMode = "needs-approval";
       continue;
@@ -63,8 +82,8 @@ function parseArguments(argv: string[]): DryRunOptions {
   }
 
   return {
-    goal:
-      goalParts.join(" ") || "Bootstrap the reusable orchestration core for George.",
+    goal: goalParts.join(" ") || "Bootstrap the reusable orchestration core for George.",
+    projectId,
     providerId,
     rootApprovalMode,
     handoffApprovalModeByRole
@@ -82,7 +101,7 @@ async function main(): Promise<void> {
   const loop = new OrchestrationLoop(runner);
   const run = await loop.runGoal(
     {
-      projectId: path.basename(rootPath),
+      projectId: options.projectId,
       goal: options.goal,
       approvalMode: options.rootApprovalMode
     },
@@ -93,6 +112,7 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         runId: run.id,
+        projectId: options.projectId,
         providerId: options.providerId,
         status: run.status,
         pendingApprovalIds: run.pendingApprovalIds,
