@@ -40,9 +40,10 @@ export class PgFeedItemStore implements FeedItemStore {
       event_type: string;
       content_json: unknown;
       created_at: string | Date;
+      processed_at: string | Date | null;
       tags: string[];
     }>(
-      `SELECT id, source, event_type, content_json, created_at, tags
+      `SELECT id, source, event_type, content_json, created_at, processed_at, tags
        FROM feed_items
        WHERE created_at >= $1
        ORDER BY created_at DESC`,
@@ -56,6 +57,10 @@ export class PgFeedItemStore implements FeedItemStore {
         eventType: row.event_type,
         contentJson: row.content_json,
         createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+        processedAt:
+          row.processed_at instanceof Date
+            ? row.processed_at.toISOString()
+            : row.processed_at,
         tags: row.tags
       })
     );

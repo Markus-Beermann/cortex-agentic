@@ -4,6 +4,8 @@ import type { Pool } from "pg";
 
 import type { Output, RunEvent, RunState, Task } from "../core/contracts";
 import { validateOutput, validateRunEvent, validateRunState, validateTask } from "../core/contracts";
+import type { FeedItem } from "../hermes/contracts";
+import { validateFeedItem } from "../hermes/contracts";
 
 function normalizeEventTimestamp(value: unknown): string {
   if (value instanceof Date) {
@@ -75,6 +77,38 @@ export async function pgListOutputs(pool: Pool, runId: string): Promise<Output[]
     [runId]
   );
   return result.rows.map((row) => validateOutput(row.data));
+}
+
+export async function pgListFeedItems(pool: Pool, limit = 50): Promise<FeedItem[]> {
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.floor(limit))) : 50;
+  const result = await pool.query<{
+    id: string;
+    source: FeedItem["source"];
+    event_type: string;
+    content_json: unknown;
+    created_at: string | Date;
+    processed_at: string | Date | null;
+    tags: string[];
+  }>(
+    `SELECT id, source, event_type, content_json, created_at, processed_at, tags
+     FROM feed_items
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [normalizedLimit]
+  );
+
+  return result.rows.map((row) =>
+    validateFeedItem({
+      id: row.id,
+      source: row.source,
+      eventType: row.event_type,
+      contentJson: row.content_json as Record<string, unknown>,
+      createdAt: normalizeEventTimestamp(row.created_at),
+      processedAt:
+        row.processed_at === null ? null : normalizeEventTimestamp(row.processed_at),
+      tags: row.tags
+    })
+  );
 }
 
 export async function pgCancelRun(pool: Pool, runId: string): Promise<RunState | null> {

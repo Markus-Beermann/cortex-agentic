@@ -25,6 +25,7 @@ describe("HermesNightlyMailer", () => {
             eventType: "github.issue_opened",
             contentJson: { title: "Need better summaries" },
             createdAt: "2026-04-02T01:00:00.000Z",
+            processedAt: null,
             tags: ["feature_request"]
           }
         ])

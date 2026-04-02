@@ -17,6 +17,7 @@ export const FeedItemSchema = z.object({
   eventType: z.string().min(1),
   contentJson: z.record(z.string(), z.unknown()),
   createdAt: TimestampSchema,
+  processedAt: TimestampSchema.nullish(),
   tags: z.array(FeedTagSchema).default([])
 });
 

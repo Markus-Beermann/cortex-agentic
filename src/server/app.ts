@@ -9,6 +9,7 @@ import {
   pgCancelRun,
   pgCreatePendingRun,
   pgGetRunState,
+  pgListFeedItems,
   pgListEvents,
   pgListOutputs,
   pgListRuns,
@@ -111,6 +112,21 @@ app.get("/runs/:id/outputs", async (req, res) => {
         }
       }
     }
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.get("/hermes/feed-items", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Hermes feed items require database backend" });
+      return;
+    }
+
+    const queryLimit = typeof req.query.limit === "string" ? Number.parseInt(req.query.limit, 10) : 50;
+    const items = await pgListFeedItems(getPool(), queryLimit);
+    res.json(items);
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }

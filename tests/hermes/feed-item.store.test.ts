@@ -29,6 +29,7 @@ describe("feed-item.store", () => {
             event_type: "github.star",
             content_json: { repository: "Markus-Beermann/cortex-agentic" },
             created_at: new Date("2026-04-02T00:00:00.000Z"),
+            processed_at: null,
             tags: ["positive_signal"]
           }
         ]
@@ -45,6 +46,7 @@ describe("feed-item.store", () => {
         eventType: "github.star",
         contentJson: { repository: "Markus-Beermann/cortex-agentic" },
         createdAt: "2026-04-02T00:00:00.000Z",
+        processedAt: null,
         tags: ["positive_signal"]
       }
     ]);
