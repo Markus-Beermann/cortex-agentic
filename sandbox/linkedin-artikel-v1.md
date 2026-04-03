@@ -6,7 +6,7 @@ Die Namen der Agenten sind dabei bewusst gewählt. Nicht, weil Personenkult im M
 
 Claude Debussy ist der Koordinator. Kein Zufall. Debussy ist in dieser Rolle Komponist und Dirigent zugleich: Er schreibt die Partitur, entscheidet, wann wer einsetzt, wer parallel spielt, wer ein Solo verdient und wer aus der Rolle fällt. Michael Angelo ist der Architekt. Der plant, bevor irgendjemand euphorisch anfängt, Wände in tragende Richtungen zu ziehen. Tony Stark baut Prototypen und alles, was nach außen sichtbar wird, ganz bewusst wie im Film. Das ist keine Metapher, das ist Absicht. DINo übernimmt Normen, Recht, Policy und sagt im Zweifel sehr unromantisch: so nicht. Sigmund Freud analysiert, was die anderen übersehen oder nicht fragen würden. Hermes läuft separat im Hintergrund, autonom und eher off im System: Monitoring, Signale, Mails. Auch das gehört zur Wahrheit: Nicht jede Rolle sitzt am selben Pult.
 
-Debussy ist für mich genau deshalb kein Werkzeug und auch kein vollautonomer Agent. Er entscheidet selbst, bis echte Unsicherheit entsteht. Ab da ist Markus die Schnittstelle.
+Debussy ist für mich genau deshalb kein Werkzeug und auch kein vollautonomer Agent. Er entscheidet selbst, bis echte Unsicherheit entsteht. Ab da fragt er.
 
 Technisch steht das inzwischen auf eigenen Beinen. Der State liegt in Railway PostgreSQL. Das Dashboard läuft auf Vercel als PWA, inklusive Clerk-Auth, mobil-first und tatsächlich auf dem iPhone nutzbar. Es gibt Run-Listen, Detailansichten, Status, Outputs, Approvals und die Frage, welcher Agent warum gerade etwas tut. Nicht mehr nur Terminalromantik, sondern ein Interface, mit dem man arbeiten kann, ohne vorher fünf CLI-Kommandos auswendig zu lernen.
 
@@ -28,3 +28,5 @@ Falls du dir das anschauen willst:
 GitHub: https://github.com/Markus-Beermann/cortex-agentic
 
 Ich finde das Thema spannend, weil hier gerade etwas zusammenkommt, das sonst oft getrennt bleibt: saubere Rollen, echte Laufzeit, sichtbares Frontend und ein technischer Unterbau, der nicht beim ersten Realitätskontakt kollabiert. Noch ist nicht alles fertig. Aber genau das ist der Punkt. Es ist nicht Theorie. Es ist im Bau, im Einsatz und an den Stellen ehrlich, an denen es noch nicht fertig ist.
+
+i.A. Tony — Unter Review von Sigmund und Claude
