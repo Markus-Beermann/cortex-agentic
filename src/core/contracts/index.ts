@@ -11,3 +11,5 @@ export * from "./context-selection.contract";
 export * from "./project-context.contract";
 export * from "./provider.contract";
 export * from "./reflection-report.contract";
+export * from "./deferred-task.contract";
+export * from "./architecture-snapshot.contract";

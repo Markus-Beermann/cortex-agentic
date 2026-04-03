@@ -82,7 +82,7 @@ export class RegistryStore {
       }
 
       return {
-        ...entry,
+        ...seededEntry,
         aliases: this.unique([...entry.aliases, ...seededEntry.aliases]),
         capabilities: this.unique([...entry.capabilities, ...seededEntry.capabilities]),
         allowedHandoffs: this.unique([...entry.allowedHandoffs, ...seededEntry.allowedHandoffs])

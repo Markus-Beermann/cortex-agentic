@@ -6,18 +6,15 @@ Stable rules are defined in `docs/MASTER_Agent_Rules.md`. These bootstrap files 
 
 ## Roles
 
-- `coordinator` -> `George` -> `docs/agent-context/roles/coordinator.bootstrap.md`
+- `coordinator` -> `Claude Debussy` -> `docs/agent-context/roles/coordinator.bootstrap.md`
 - `architect` -> `Michael Angelo` -> `docs/agent-context/roles/architect.bootstrap.md`
 - `implementer` -> `Tony` -> `docs/agent-context/roles/implementer.bootstrap.md`
 - `reviewer` -> `DINo` -> `docs/agent-context/roles/reviewer.bootstrap.md`
 
-## Reserved Specialist Personas
+## System Roles
 
-- `Sigmund` is reserved as a future psychology or reflection specialist and is intentionally not part of the Phase 1 core registry.
-- `Sigmund` is expected to emit the `ReflectionReport` contract once a real reflection loop exists.
-
-## System Functions
-
+- `Sigmund` is a registered system role for psychology, ethics, reflection, and critique.
+- `Sigmund` bootstrap: `docs/agent-context/roles/sigmund.bootstrap.md`
 - `Hermes` is a private monitoring system function registered for discoverability, but intentionally outside the orchestration handoff graph.
 - `Hermes` bootstrap: `docs/agent-context/roles/hermes.bootstrap.md`
 

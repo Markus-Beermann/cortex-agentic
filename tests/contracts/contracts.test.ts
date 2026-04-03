@@ -70,9 +70,9 @@ describe("contracts", () => {
       id: "role/coordinator",
       roleId: "coordinator",
       technicalName: "Coordinator",
-      personaName: "George",
-      aliases: ["George Senior"],
-      displayName: "George",
+      personaName: "Claude Debussy",
+      aliases: ["Claude", "Debussy", "Komponist"],
+      displayName: "Debussy",
       bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
       capabilities: ["routing"],
       allowedHandoffs: ["architect"]
@@ -91,6 +91,22 @@ describe("contracts", () => {
       displayName: "Hermes",
       bootstrapPath: "docs/agent-context/roles/hermes.bootstrap.md",
       capabilities: ["github monitoring", "nightly summaries"],
+      allowedHandoffs: []
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts Sigmund as a registry-only critique role without widening the core role graph", () => {
+    const result = RegistryEntrySchema.safeParse({
+      id: "role/sigmund",
+      roleId: "sigmund",
+      technicalName: "Ethics Agent",
+      personaName: "Sigmund Freud",
+      aliases: ["Sigmund", "Freud"],
+      displayName: "Sigmund",
+      bootstrapPath: "docs/agent-context/roles/sigmund.bootstrap.md",
+      capabilities: ["psychology", "ethics", "reflection", "critique"],
       allowedHandoffs: []
     });
 

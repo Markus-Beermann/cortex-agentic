@@ -67,5 +67,27 @@ export async function initSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS feed_items_source_idx ON feed_items (source);
     CREATE INDEX IF NOT EXISTS feed_items_created_at_idx ON feed_items (created_at DESC);
     CREATE INDEX IF NOT EXISTS feed_items_source_event_idx ON feed_items (source, event_type);
+
+    CREATE TABLE IF NOT EXISTS deferred_tasks (
+      id           TEXT PRIMARY KEY,
+      addressee    TEXT NOT NULL,
+      goal         TEXT NOT NULL,
+      context      JSONB,
+      status       TEXT NOT NULL DEFAULT 'pending',
+      created_at   TIMESTAMPTZ NOT NULL,
+      released_at  TIMESTAMPTZ,
+      created_by   TEXT NOT NULL DEFAULT 'markus'
+    );
+
+    CREATE INDEX IF NOT EXISTS deferred_tasks_status_idx ON deferred_tasks (status);
+    CREATE INDEX IF NOT EXISTS deferred_tasks_addressee_idx ON deferred_tasks (addressee);
+
+    CREATE TABLE IF NOT EXISTS architecture_snapshots (
+      id           TEXT PRIMARY KEY,
+      title        TEXT NOT NULL,
+      mermaid      TEXT NOT NULL,
+      notes        TEXT,
+      created_at   TIMESTAMPTZ NOT NULL
+    );
   `);
 }

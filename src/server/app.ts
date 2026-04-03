@@ -1,5 +1,7 @@
 import express from "express";
 
+import { DeferredTaskStatusSchema } from "../core/contracts";
+import { createHermesRuntime } from "../hermes/runtime";
 import { EventLogStore } from "../state/event-log.store";
 import { OutputStore } from "../state/output.store";
 import { RunStateStore } from "../state/run-state.store";
@@ -9,13 +11,17 @@ import {
   pgCancelRun,
   pgCreatePendingRun,
   pgGetRunState,
+  pgListArchitectureSnapshots,
+  pgListDeferredTasks,
   pgListFeedItems,
   pgListEvents,
   pgListOutputs,
   pgListRuns,
-  pgListTasks
+  pgListTasks,
+  pgReleaseDeferredTask,
+  pgSaveArchitectureSnapshot,
+  pgSaveDeferredTask
 } from "./pg-queries";
-import { createHermesRuntime } from "../hermes/runtime";
 
 const ROOT_PATH = process.env.ORCHESTRATOR_ROOT ?? process.cwd();
 const DATABASE_PUBLIC_URL = process.env.DATABASE_PUBLIC_URL;
@@ -132,6 +138,147 @@ app.get("/hermes/feed-items", async (req, res) => {
   }
 });
 
+app.post("/deferred-tasks", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Deferred tasks require database backend" });
+      return;
+    }
+
+    const body = req.body as {
+      addressee?: unknown;
+      goal?: unknown;
+      context?: unknown;
+      createdBy?: unknown;
+    };
+
+    if (typeof body.addressee !== "string" || body.addressee.trim().length === 0) {
+      res.status(400).json({ error: "addressee is required" });
+      return;
+    }
+
+    if (typeof body.goal !== "string" || body.goal.trim().length === 0) {
+      res.status(400).json({ error: "goal is required" });
+      return;
+    }
+
+    const deferredTask = await pgSaveDeferredTask(getPool(), {
+      addressee: body.addressee.trim(),
+      goal: body.goal.trim(),
+      context: isRecord(body.context) ? body.context : null,
+      createdBy: typeof body.createdBy === "string" && body.createdBy.trim().length > 0
+        ? body.createdBy.trim()
+        : undefined
+    });
+
+    res.status(201).json(deferredTask);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.get("/deferred-tasks", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Deferred tasks require database backend" });
+      return;
+    }
+
+    const addressee = typeof req.query.addressee === "string" ? req.query.addressee : undefined;
+    const statusQuery = typeof req.query.status === "string" ? req.query.status : undefined;
+    const statusResult = statusQuery
+      ? DeferredTaskStatusSchema.safeParse(statusQuery)
+      : { success: true as const, data: undefined };
+
+    if (!statusResult.success) {
+      res.status(400).json({ error: "Invalid deferred task status filter" });
+      return;
+    }
+
+    const tasks = await pgListDeferredTasks(getPool(), {
+      addressee,
+      status: statusResult.data
+    });
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.patch("/deferred-tasks/:id/release", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Deferred tasks require database backend" });
+      return;
+    }
+
+    const deferredTask = await pgReleaseDeferredTask(getPool(), req.params.id);
+
+    if (!deferredTask) {
+      res.status(404).json({ error: "Deferred task not found" });
+      return;
+    }
+
+    res.json(deferredTask);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.post("/architecture-snapshots", async (req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Architecture snapshots require database backend" });
+      return;
+    }
+
+    const body = req.body as {
+      title?: unknown;
+      mermaid?: unknown;
+      notes?: unknown;
+      id?: unknown;
+    };
+
+    if (typeof body.title !== "string" || body.title.trim().length === 0) {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+
+    if (typeof body.mermaid !== "string" || body.mermaid.trim().length === 0) {
+      res.status(400).json({ error: "mermaid is required" });
+      return;
+    }
+
+    const snapshot = await pgSaveArchitectureSnapshot(getPool(), {
+      id: typeof body.id === "string" && body.id.trim().length > 0 ? body.id.trim() : undefined,
+      title: body.title.trim(),
+      mermaid: body.mermaid.trim(),
+      notes:
+        typeof body.notes === "string" && body.notes.trim().length > 0
+          ? body.notes.trim()
+          : null
+    });
+
+    res.status(201).json(snapshot);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.get("/architecture-snapshots", async (_req, res) => {
+  try {
+    if (!useDb) {
+      res.status(503).json({ error: "Architecture snapshots require database backend" });
+      return;
+    }
+
+    const snapshots = await pgListArchitectureSnapshots(getPool());
+    res.json(snapshots);
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 app.patch("/runs/:id/cancel", async (req, res) => {
   try {
     if (!useDb) {
@@ -217,4 +364,8 @@ function parseOptionalPositiveInt(value: unknown): number | undefined {
   }
 
   return Math.floor(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

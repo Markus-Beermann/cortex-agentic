@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { IdentifierSchema, RoleIdSchema } from "./shared.contract";
 
-export const AgentRoleIdSchema = z.union([RoleIdSchema, z.literal("hermes")]);
+export const AgentRoleIdSchema = z.union([
+  RoleIdSchema,
+  z.literal("hermes"),
+  z.literal("sigmund")
+]);
 
 export const RegistryEntrySchema = z.object({
   id: IdentifierSchema,

@@ -1,9 +1,24 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
 
-import type { Output, RunEvent, RunState, Task } from "../core/contracts";
-import { validateOutput, validateRunEvent, validateRunState, validateTask } from "../core/contracts";
+import type {
+  ArchitectureSnapshot,
+  DeferredTask,
+  DeferredTaskStatus,
+  Output,
+  RunEvent,
+  RunState,
+  Task
+} from "../core/contracts";
+import {
+  validateArchitectureSnapshot,
+  validateDeferredTask,
+  validateOutput,
+  validateRunEvent,
+  validateRunState,
+  validateTask
+} from "../core/contracts";
 import type { FeedItem } from "../hermes/contracts";
 import { validateFeedItem } from "../hermes/contracts";
 
@@ -111,6 +126,164 @@ export async function pgListFeedItems(pool: Pool, limit = 50): Promise<FeedItem[
   );
 }
 
+export async function pgSaveDeferredTask(
+  pool: Pool,
+  input: {
+    id?: string;
+    addressee: string;
+    goal: string;
+    context?: Record<string, unknown> | null;
+    createdBy?: string;
+  }
+): Promise<DeferredTask> {
+  const id = input.id ?? randomUUID();
+  const createdAt = new Date().toISOString();
+  const result = await pool.query<{
+    id: string;
+    addressee: string;
+    goal: string;
+    context: Record<string, unknown> | null;
+    status: string;
+    created_at: string | Date;
+    released_at: string | Date | null;
+    created_by: string;
+  }>(
+    `INSERT INTO deferred_tasks (id, addressee, goal, context, status, created_at, released_at, created_by)
+     VALUES ($1, $2, $3, $4::jsonb, 'pending', $5, NULL, $6)
+     RETURNING id, addressee, goal, context, status, created_at, released_at, created_by`,
+    [
+      id,
+      input.addressee,
+      input.goal,
+      JSON.stringify(input.context ?? null),
+      createdAt,
+      input.createdBy ?? "markus"
+    ]
+  );
+
+  return mapDeferredTaskRow(result.rows[0]);
+}
+
+export async function pgListDeferredTasks(
+  pool: Pool,
+  filters: {
+    addressee?: string;
+    status?: DeferredTaskStatus;
+  } = {}
+): Promise<DeferredTask[]> {
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters.addressee) {
+    values.push(filters.addressee);
+    clauses.push(`addressee = $${values.length}`);
+  }
+
+  if (filters.status) {
+    values.push(filters.status);
+    clauses.push(`status = $${values.length}`);
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const result = await pool.query<{
+    id: string;
+    addressee: string;
+    goal: string;
+    context: Record<string, unknown> | null;
+    status: string;
+    created_at: string | Date;
+    released_at: string | Date | null;
+    created_by: string;
+  }>(
+    `SELECT id, addressee, goal, context, status, created_at, released_at, created_by
+     FROM deferred_tasks
+     ${whereClause}
+     ORDER BY created_at DESC`,
+    values
+  );
+
+  return result.rows.map(mapDeferredTaskRow);
+}
+
+export async function pgReleaseDeferredTask(
+  pool: Pool,
+  id: string
+): Promise<DeferredTask | null> {
+  const releasedAt = new Date().toISOString();
+  const result = await pool.query<{
+    id: string;
+    addressee: string;
+    goal: string;
+    context: Record<string, unknown> | null;
+    status: string;
+    created_at: string | Date;
+    released_at: string | Date | null;
+    created_by: string;
+  }>(
+    `UPDATE deferred_tasks
+     SET status = 'released',
+         released_at = $2
+     WHERE id = $1
+     RETURNING id, addressee, goal, context, status, created_at, released_at, created_by`,
+    [id, releasedAt]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return mapDeferredTaskRow(result.rows[0]);
+}
+
+export async function pgSaveArchitectureSnapshot(
+  pool: Pool,
+  input: {
+    id?: string;
+    title: string;
+    mermaid: string;
+    notes?: string | null;
+  }
+): Promise<ArchitectureSnapshot> {
+  const id =
+    input.id ??
+    `snapshot_${createHash("sha256").update(`${input.title}\n${input.mermaid}`).digest("hex").slice(0, 24)}`;
+  const createdAt = new Date().toISOString();
+  const result = await pool.query<{
+    id: string;
+    title: string;
+    mermaid: string;
+    notes: string | null;
+    created_at: string | Date;
+  }>(
+    `INSERT INTO architecture_snapshots (id, title, mermaid, notes, created_at)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (id) DO UPDATE
+       SET title = EXCLUDED.title,
+           mermaid = EXCLUDED.mermaid,
+           notes = EXCLUDED.notes
+     RETURNING id, title, mermaid, notes, created_at`,
+    [id, input.title, input.mermaid, input.notes ?? null, createdAt]
+  );
+
+  return mapArchitectureSnapshotRow(result.rows[0]);
+}
+
+export async function pgListArchitectureSnapshots(pool: Pool): Promise<ArchitectureSnapshot[]> {
+  const result = await pool.query<{
+    id: string;
+    title: string;
+    mermaid: string;
+    notes: string | null;
+    created_at: string | Date;
+  }>(
+    `SELECT id, title, mermaid, notes, created_at
+     FROM architecture_snapshots
+     ORDER BY created_at DESC`
+  );
+
+  return result.rows.map(mapArchitectureSnapshotRow);
+}
+
 export async function pgCancelRun(pool: Pool, runId: string): Promise<RunState | null> {
   const result = await pool.query<{ data: unknown }>(
     `UPDATE runs
@@ -151,6 +324,45 @@ export async function pgCreatePendingRun(
     [id, projectId, goal, JSON.stringify(run), now, now]
   );
   return run;
+}
+
+function mapDeferredTaskRow(row: {
+  id: string;
+  addressee: string;
+  goal: string;
+  context: Record<string, unknown> | null;
+  status: string;
+  created_at: string | Date;
+  released_at: string | Date | null;
+  created_by: string;
+}): DeferredTask {
+  return validateDeferredTask({
+    id: row.id,
+    addressee: row.addressee,
+    goal: row.goal,
+    context: row.context ?? null,
+    status: row.status,
+    createdAt: normalizeEventTimestamp(row.created_at),
+    releasedAt:
+      row.released_at === null ? null : normalizeEventTimestamp(row.released_at),
+    createdBy: row.created_by
+  });
+}
+
+function mapArchitectureSnapshotRow(row: {
+  id: string;
+  title: string;
+  mermaid: string;
+  notes: string | null;
+  created_at: string | Date;
+}): ArchitectureSnapshot {
+  return validateArchitectureSnapshot({
+    id: row.id,
+    title: row.title,
+    mermaid: row.mermaid,
+    notes: row.notes,
+    createdAt: normalizeEventTimestamp(row.created_at)
+  });
 }
 
 export { normalizeEventTimestamp };

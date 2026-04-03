@@ -24,12 +24,14 @@ describe("RegistryStore", () => {
     await registryStore.seed(createDefaultRegistry());
 
     const personaEntry = await registryStore.resolve("Michael Angelo");
-    const aliasEntry = await registryStore.resolve("George Senior");
+    const aliasEntry = await registryStore.resolve("Komponist");
     const hermesEntry = await registryStore.resolve("Hermes");
+    const sigmundEntry = await registryStore.resolve("Freud");
 
     expect(personaEntry?.roleId).toBe("architect");
     expect(aliasEntry?.roleId).toBe("coordinator");
     expect(hermesEntry?.roleId).toBe("hermes");
+    expect(sigmundEntry?.roleId).toBe("sigmund");
   });
 
   it("merges seeded role updates into an existing registry file", async () => {
@@ -59,10 +61,14 @@ describe("RegistryStore", () => {
     const seededEntries = await registryStore.seed(createDefaultRegistry());
     const coordinatorEntry = seededEntries.find((entry) => entry.roleId === "coordinator");
     const hermesEntry = seededEntries.find((entry) => entry.roleId === "hermes");
+    const sigmundEntry = seededEntries.find((entry) => entry.roleId === "sigmund");
 
     expect(coordinatorEntry?.allowedHandoffs).toContain("architect");
     expect(coordinatorEntry?.allowedHandoffs).toContain("implementer");
     expect(coordinatorEntry?.allowedHandoffs).toContain("reviewer");
+    expect(coordinatorEntry?.personaName).toBe("Claude Debussy");
+    expect(coordinatorEntry?.displayName).toBe("Debussy");
     expect(hermesEntry?.allowedHandoffs).toEqual([]);
+    expect(sigmundEntry?.allowedHandoffs).toEqual([]);
   });
 });

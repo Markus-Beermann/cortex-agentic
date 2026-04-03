@@ -6,9 +6,9 @@ export function createDefaultRegistry(): RegistryEntry[] {
       id: "role/coordinator",
       roleId: "coordinator",
       technicalName: "Coordinator",
-      personaName: "George",
-      aliases: ["George Senior"],
-      displayName: "George",
+      personaName: "Claude Debussy",
+      aliases: ["Claude", "Debussy", "Komponist"],
+      displayName: "Debussy",
       bootstrapPath: "docs/agent-context/roles/coordinator.bootstrap.md",
       capabilities: ["run setup", "routing", "stop decisions"],
       allowedHandoffs: ["architect", "implementer", "reviewer"]
@@ -32,7 +32,14 @@ export function createDefaultRegistry(): RegistryEntry[] {
       aliases: ["Tony Stark"],
       displayName: "Tony",
       bootstrapPath: "docs/agent-context/roles/implementer.bootstrap.md",
-      capabilities: ["task execution", "artifact delivery", "blocker reporting"],
+      capabilities: [
+        "task execution",
+        "artifact delivery",
+        "blocker reporting",
+        "external communication",
+        "presentation",
+        "linkedin"
+      ],
       allowedHandoffs: ["reviewer"]
     },
     {
@@ -43,7 +50,7 @@ export function createDefaultRegistry(): RegistryEntry[] {
       aliases: ["DINo Reviewer"],
       displayName: "DINo",
       bootstrapPath: "docs/agent-context/roles/reviewer.bootstrap.md",
-      capabilities: ["validation", "completion", "corrective feedback"],
+      capabilities: ["DIN standards", "legal", "policy", "compliance", "review"],
       allowedHandoffs: ["implementer"]
     },
     {
@@ -55,6 +62,17 @@ export function createDefaultRegistry(): RegistryEntry[] {
       displayName: "Hermes",
       bootstrapPath: "docs/agent-context/roles/hermes.bootstrap.md",
       capabilities: ["github monitoring", "linkedin ingestion", "nightly summaries"],
+      allowedHandoffs: []
+    },
+    {
+      id: "role/sigmund",
+      roleId: "sigmund",
+      technicalName: "Ethics Agent",
+      personaName: "Sigmund Freud",
+      aliases: ["Sigmund", "Freud"],
+      displayName: "Sigmund",
+      bootstrapPath: "docs/agent-context/roles/sigmund.bootstrap.md",
+      capabilities: ["psychology", "ethics", "reflection", "critique"],
       allowedHandoffs: []
     }
   ];

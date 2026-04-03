@@ -46,3 +46,6 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added Hermes v1 as a private monitoring system function with PostgreSQL-backed `feed_items`, GitHub polling, LinkedIn screenshot ingestion, and nightly mail delivery on the existing Railway stack.
 - Registered Hermes for discoverability via a registry-only agent role ID while keeping it outside the orchestration handoff graph and core role enum.
 - Added `POST /hermes/nightly` to the existing Express server so Railway Cron can trigger Hermes without inventing a second runtime.
+- Shifted the coordinator persona from George to Claude Debussy while keeping `coordinator` as the stable runtime role ID.
+- Added Sigmund Freud as a second registry-only system role for ethics, psychology, and critique without widening the orchestration handoff graph.
+- Added PostgreSQL-backed `deferred_tasks` and `architecture_snapshots`, plus idempotent seeding of the Debussy Mermaid snapshot from docs at server startup.
