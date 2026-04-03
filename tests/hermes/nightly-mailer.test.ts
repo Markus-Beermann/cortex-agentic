@@ -12,7 +12,7 @@ describe("HermesNightlyMailer", () => {
         githubLookbackHours: 72,
         nightlyLookbackHours: 24,
         resendApiKey: "re_test",
-        mailFrom: "Hermes <hermes@example.com>",
+        mailFrom: "onboarding@resend.dev",
         mailTo: "markus@example.com",
         cronSecret: "secret"
       },

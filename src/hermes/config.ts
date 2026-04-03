@@ -2,6 +2,7 @@ const DEFAULT_GITHUB_REPOS = ["Markus-Beermann/ycsp", "Markus-Beermann/cortex-ag
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 const DEFAULT_GITHUB_LOOKBACK_HOURS = 72;
 const DEFAULT_NIGHTLY_LOOKBACK_HOURS = 24;
+const DEFAULT_MAIL_FROM = "onboarding@resend.dev";
 
 export interface HermesConfig {
   anthropicApiKey: string;
@@ -31,7 +32,7 @@ export function getHermesConfig(env: NodeJS.ProcessEnv = process.env): HermesCon
       DEFAULT_NIGHTLY_LOOKBACK_HOURS
     ),
     resendApiKey: env.RESEND_API_KEY,
-    mailFrom: env.HERMES_MAIL_FROM,
+    mailFrom: env.HERMES_MAIL_FROM ?? DEFAULT_MAIL_FROM,
     mailTo: env.HERMES_MAIL_TO,
     cronSecret: env.HERMES_CRON_SECRET
   };

@@ -25,6 +25,17 @@ export function createDefaultRegistry(): RegistryEntry[] {
       allowedHandoffs: ["implementer"]
     },
     {
+      id: "role/george",
+      roleId: "george",
+      technicalName: "Implementer",
+      personaName: "George Orwell",
+      aliases: ["George", "Orwell"],
+      displayName: "George",
+      bootstrapPath: "docs/agent-context/roles/george.bootstrap.md",
+      capabilities: ["code writing", "implementation", "artifact delivery", "blocker reporting"],
+      allowedHandoffs: ["reviewer"]
+    },
+    {
       id: "role/implementer",
       roleId: "implementer",
       technicalName: "Implementer",

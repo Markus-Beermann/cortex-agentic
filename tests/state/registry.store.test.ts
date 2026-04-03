@@ -25,11 +25,13 @@ describe("RegistryStore", () => {
 
     const personaEntry = await registryStore.resolve("Michael Angelo");
     const aliasEntry = await registryStore.resolve("Komponist");
+    const georgeEntry = await registryStore.resolve("Orwell");
     const hermesEntry = await registryStore.resolve("Hermes");
     const sigmundEntry = await registryStore.resolve("Freud");
 
     expect(personaEntry?.roleId).toBe("architect");
     expect(aliasEntry?.roleId).toBe("coordinator");
+    expect(georgeEntry?.roleId).toBe("george");
     expect(hermesEntry?.roleId).toBe("hermes");
     expect(sigmundEntry?.roleId).toBe("sigmund");
   });
@@ -60,6 +62,7 @@ describe("RegistryStore", () => {
     const registryStore = new RegistryStore(rootPath);
     const seededEntries = await registryStore.seed(createDefaultRegistry());
     const coordinatorEntry = seededEntries.find((entry) => entry.roleId === "coordinator");
+    const georgeEntry = seededEntries.find((entry) => entry.roleId === "george");
     const hermesEntry = seededEntries.find((entry) => entry.roleId === "hermes");
     const sigmundEntry = seededEntries.find((entry) => entry.roleId === "sigmund");
 
@@ -68,6 +71,7 @@ describe("RegistryStore", () => {
     expect(coordinatorEntry?.allowedHandoffs).toContain("reviewer");
     expect(coordinatorEntry?.personaName).toBe("Claude Debussy");
     expect(coordinatorEntry?.displayName).toBe("Debussy");
+    expect(georgeEntry?.allowedHandoffs).toEqual(["reviewer"]);
     expect(hermesEntry?.allowedHandoffs).toEqual([]);
     expect(sigmundEntry?.allowedHandoffs).toEqual([]);
   });

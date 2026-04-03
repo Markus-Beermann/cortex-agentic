@@ -49,3 +49,5 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Shifted the coordinator persona from George to Claude Debussy while keeping `coordinator` as the stable runtime role ID.
 - Added Sigmund Freud as a second registry-only system role for ethics, psychology, and critique without widening the orchestration handoff graph.
 - Added PostgreSQL-backed `deferred_tasks` and `architecture_snapshots`, plus idempotent seeding of the Debussy Mermaid snapshot from docs at server startup.
+- Added George Orwell as a registry-only implementation persona for direct code work without mutating the orchestration role enum.
+- Defaulted `HERMES_MAIL_FROM` to `onboarding@resend.dev` so Hermes can send through Resend without requiring a custom verified sender during onboarding.

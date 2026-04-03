@@ -97,6 +97,22 @@ describe("contracts", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts George Orwell as a registry-only implementation role without widening the core role graph", () => {
+    const result = RegistryEntrySchema.safeParse({
+      id: "role/george",
+      roleId: "george",
+      technicalName: "Implementer",
+      personaName: "George Orwell",
+      aliases: ["George", "Orwell"],
+      displayName: "George",
+      bootstrapPath: "docs/agent-context/roles/george.bootstrap.md",
+      capabilities: ["code writing", "implementation", "artifact delivery", "blocker reporting"],
+      allowedHandoffs: ["reviewer"]
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("accepts Sigmund as a registry-only critique role without widening the core role graph", () => {
     const result = RegistryEntrySchema.safeParse({
       id: "role/sigmund",

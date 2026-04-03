@@ -4,6 +4,7 @@ import { IdentifierSchema, RoleIdSchema } from "./shared.contract";
 
 export const AgentRoleIdSchema = z.union([
   RoleIdSchema,
+  z.literal("george"),
   z.literal("hermes"),
   z.literal("sigmund")
 ]);
