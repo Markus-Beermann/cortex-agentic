@@ -1,4 +1,14 @@
-import type { Output, OutputArtifact, RunEvent, RunState, RunStatus, Task, TaskStatus } from "@/lib/types";
+import type {
+  DeferredTask,
+  DeferredTaskStatus,
+  Output,
+  OutputArtifact,
+  RunEvent,
+  RunState,
+  RunStatus,
+  Task,
+  TaskStatus
+} from "@/lib/types";
 
 class StateServerError extends Error {
   public readonly status: number;
@@ -63,6 +73,16 @@ function readRunStatus(value: unknown): RunStatus {
     status !== "failed"
   ) {
     throw new StateServerError("Invalid status field from state server.", 502);
+  }
+
+  return status;
+}
+
+function readDeferredTaskStatus(value: unknown): DeferredTaskStatus {
+  const status = readString(value, "status");
+
+  if (status !== "pending" && status !== "released") {
+    throw new StateServerError("Invalid deferred task status field from state server.", 502);
   }
 
   return status;
@@ -259,6 +279,23 @@ function normalizeOutput(value: unknown): Output {
   };
 }
 
+function normalizeDeferredTask(value: unknown): DeferredTask {
+  if (!isRecord(value)) {
+    throw new StateServerError("Invalid deferred task payload.", 502);
+  }
+
+  return {
+    id: readString(value.id, "id"),
+    addressee: readString(value.addressee, "addressee"),
+    goal: readString(value.goal, "goal"),
+    context: value.context ?? null,
+    status: readDeferredTaskStatus(value.status),
+    createdAt: normalizeTimestamp(value.createdAt, "createdAt"),
+    releasedAt: readNullableString(value.releasedAt, "releasedAt"),
+    createdBy: readString(value.createdBy, "createdBy")
+  };
+}
+
 export async function listTasks(runId: string): Promise<Task[]> {
   const payload = await requestJson(`/runs/${runId}/tasks`);
   if (!Array.isArray(payload)) throw new StateServerError("Invalid tasks payload.", 502);
@@ -280,5 +317,35 @@ export async function cancelRun(runId: string): Promise<RunState> {
 export async function createRun(goal: string, projectId = "sandbox"): Promise<RunState> {
   return normalizeRunState(
     await requestJson("/runs", { method: "POST", body: { goal, projectId } })
+  );
+}
+
+export async function listDeferredTasks(
+  addressee?: string,
+  status?: DeferredTaskStatus
+): Promise<DeferredTask[]> {
+  const searchParams = new URLSearchParams();
+
+  if (addressee) {
+    searchParams.set("addressee", addressee);
+  }
+
+  if (status) {
+    searchParams.set("status", status);
+  }
+
+  const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+  const payload = await requestJson(`/deferred-tasks${suffix}`);
+
+  if (!Array.isArray(payload)) {
+    throw new StateServerError("Invalid deferred tasks payload.", 502);
+  }
+
+  return payload.map(normalizeDeferredTask);
+}
+
+export async function releaseDeferredTask(id: string): Promise<DeferredTask> {
+  return normalizeDeferredTask(
+    await requestJson(`/deferred-tasks/${id}/release`, { method: "PATCH" })
   );
 }

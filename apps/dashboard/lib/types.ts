@@ -63,3 +63,16 @@ export type Output = {
   artifacts: OutputArtifact[];
   nextAction: { kind: string; targetRole?: string; taskTitle?: string };
 };
+
+export type DeferredTaskStatus = "pending" | "released";
+
+export type DeferredTask = {
+  id: string;
+  addressee: string;
+  goal: string;
+  context: unknown;
+  status: DeferredTaskStatus;
+  createdAt: string;
+  releasedAt: string | null;
+  createdBy: string;
+};

@@ -28,6 +28,21 @@ export function AppHeader() {
             <span>Protected run visibility for authenticated operators.</span>
           </Link>
 
+          <nav className="topbar-nav" aria-label="Primary">
+            <Link
+              href="/"
+              className={`topbar-nav-link${pathname === "/" ? " topbar-nav-link-active" : ""}`}
+            >
+              Runs
+            </Link>
+            <Link
+              href="/deferred-tasks"
+              className={`topbar-nav-link${pathname === "/deferred-tasks" ? " topbar-nav-link-active" : ""}`}
+            >
+              Tasks
+            </Link>
+          </nav>
+
           <div className="topbar-user">
             <div className="topbar-user-meta">
               <strong>{isLoaded ? fullName : "Loading user…"}</strong>
