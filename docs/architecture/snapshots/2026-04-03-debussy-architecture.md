@@ -43,7 +43,7 @@ graph TD
 ## Was sich gegenüber v1 geändert hat
 
 - George war Coordinator-Persona → ersetzt durch Claude Debussy
-- George bleibt der Name des *Systems*, nicht einer Rolle darin
+- George Orwell neu: direkte Implementierungsrolle für klaren, lesbaren Code ohne Bullshit
 - Debussy ist nicht eine Rolle im Run — Debussy *ist* der Run
 - Dashboard = Schnittstelle Markus↔Debussy, nicht nur Visualisierung
 - Sigmund Freud neu: Ethik, Psychologie, Reflexion, Kritik
@@ -52,8 +52,4 @@ graph TD
 - deferred_tasks: Aufgaben können für später gespeichert werden
 
 ## Noch nicht implementiert
-- Debussy als benannte Coordinator-Rolle im Code
-- Sigmund Freud in Registry + Bootstrap
-- deferred_tasks Tabelle
 - Frage-Routing Tony→Debussy→Markus via Dashboard
-- Mermaid-History Tabelle in PostgreSQL
