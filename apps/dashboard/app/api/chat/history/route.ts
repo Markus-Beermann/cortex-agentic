@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getResponseError, readChatHistory } from "@/lib/state-server";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
   try {

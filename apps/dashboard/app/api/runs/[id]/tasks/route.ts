@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getResponseError, listTasks } from "@/lib/state-server";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function GET(
   _req: Request,
