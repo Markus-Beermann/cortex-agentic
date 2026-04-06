@@ -24,6 +24,8 @@
     "hermes:ingest-linkedin": "tsx src/cli/hermes-ingest-linkedin.ts",
     "hermes:nightly": "tsx src/cli/hermes-nightly.ts",
     "build:native": "npm run build --workspace=apps/native",
+    "build:mobile": "npm run build --workspace=apps/native && cd apps/mobile && npx cap sync android",
+    "build:desktop": "npm run build --workspace=apps/native && npm run build --workspace=apps/desktop",
     "build": "tsc -p tsconfig.json",
     "server": "tsx src/server/index.ts",
     "start": "node dist/server/index.js",

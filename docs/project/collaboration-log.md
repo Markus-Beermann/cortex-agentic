@@ -63,3 +63,5 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Introduced the shared `@cortex/api-client` package and migrated dashboard screens off Next.js proxy routes so browser clients can talk to Railway directly.
 - Added `apps/native/` as a Vite + React SPA target using `@clerk/react`, React Router, the shared API client, and copied dashboard presentation components as the first native shell for Android/Desktop packaging.
 - Validated the native shell with `npx tsc --noEmit` and `npm run build`, producing `apps/native/dist/index.html` and a complete Vite bundle without breaking the existing root checks.
+- Added `apps/mobile/` with Capacitor Android scaffolding, synchronized against `apps/native/dist`, and configured Android deep linking for Clerk redirects via `cortex://clerk-auth`.
+- Added `apps/desktop/` with a Tauri shell pointed at the native Vite bundle, plus deep-link plugin wiring and macOS entitlements for direct distribution outside the App Store.
