@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
 import { startTransition, useCallback, useEffect, useEffectEvent, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { getErrorMessage } from "@/lib/api-client";
 import { buildRunGraph } from "@/lib/run-graph";
@@ -178,7 +176,7 @@ export function RunDetailScreen({ runId }: RunDetailScreenProps) {
   return (
     <main className="shell detail-shell">
       <div className="page-stack">
-        <Link href="/" className="back-link">Back to runs</Link>
+        <Link to="/" className="back-link">Back to runs</Link>
 
         <section className="panel hero-panel">
           <div className="hero-grid">

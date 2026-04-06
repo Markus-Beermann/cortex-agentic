@@ -13,6 +13,7 @@ import { OutputStore } from "../state/output.store";
 import { RegistryStore } from "../state/registry.store";
 import { RunStateStore } from "../state/run-state.store";
 import { TaskStore } from "../state/task.store";
+import { createClerkJwtMiddleware, createRequireAuth } from "./auth";
 import { getPool } from "./db";
 import {
   pgCancelRun,
@@ -50,7 +51,37 @@ let registrySeedPromise: Promise<RegistryEntry[]> | null = null;
 
 export const app = express();
 
+app.use(createClerkJwtMiddleware());
 app.use(express.json());
+app.use((req, res, next) => {
+  const origin = req.header("origin");
+
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Hermes-Secret");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+
+  next();
+});
+
+app.get("/health", (_req, res) => {
+  res.json({
+    ok: true,
+    backend: useDb ? "postgres" : "filesystem"
+  });
+});
+
+app.use(createRequireAuth());
 
 app.get("/registry", async (_req, res) => {
   try {

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-labelledby="title desc">
+  <title id="title">Cortex apple icon</title>
+  <desc id="desc">Three circles and the word Cortex on a dark background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1b2f"/>
+      <stop offset="100%" stop-color="#07111f"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="28" fill="url(#bg)"/>
+  <circle cx="54" cy="74" r="18" fill="#57a4ff"/>
+  <circle cx="90" cy="60" r="26" fill="#57a4ff"/>
+  <circle cx="126" cy="74" r="18" fill="#35d49a"/>
+  <text
+    x="90"
+    y="126"
+    fill="#c8dbff"
+    font-family="Helvetica, Arial, sans-serif"
+    font-size="22"
+    font-weight="700"
+    letter-spacing="2.4"
+    text-anchor="middle"
+  >CORTEX</text>
+</svg>

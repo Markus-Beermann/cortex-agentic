@@ -1,5 +1,3 @@
-"use client";
-
 import { startTransition, useCallback, useEffect, useEffectEvent, useState } from "react";
 
 import { getErrorMessage } from "@/lib/api-client";

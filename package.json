@@ -2,6 +2,10 @@
   "name": "george-orchestrator",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "description": "Reusable multi-agent orchestration core for private project automation.",
   "scripts": {
     "bootstrap": "tsx src/cli/bootstrap.ts",
@@ -19,6 +23,7 @@
     "hermes:poll-github": "tsx src/cli/hermes-poll-github.ts",
     "hermes:ingest-linkedin": "tsx src/cli/hermes-ingest-linkedin.ts",
     "hermes:nightly": "tsx src/cli/hermes-nightly.ts",
+    "build:native": "npm run build --workspace=apps/native",
     "build": "tsc -p tsconfig.json",
     "server": "tsx src/server/index.ts",
     "start": "node dist/server/index.js",
@@ -27,6 +32,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
+    "@clerk/express": "^1.7.10",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "openai": "^6.33.0",

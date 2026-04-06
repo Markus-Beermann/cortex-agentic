@@ -59,3 +59,7 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added server endpoints for chat, chat history, registry discovery, LLM provider discovery, and GitHub repo discovery.
 - Injected agent bootstrap markdown into `/chat` system prompts so Debussy answers as Debussy instead of generic foundation-model soup.
 - Added a new dashboard chat screen with repo, agent, and LLM selectors plus persisted local preferences for the selected repo, agent, and model.
+- Added Railway CORS plus Clerk JWT protection to the Express server while exempting `/health`, `/hermes/nightly`, and `/hermes/feed-items` for the non-dashboard access paths that use different trust models.
+- Introduced the shared `@cortex/api-client` package and migrated dashboard screens off Next.js proxy routes so browser clients can talk to Railway directly.
+- Added `apps/native/` as a Vite + React SPA target using `@clerk/react`, React Router, the shared API client, and copied dashboard presentation components as the first native shell for Android/Desktop packaging.
+- Validated the native shell with `npx tsc --noEmit` and `npm run build`, producing `apps/native/dist/index.html` and a complete Vite bundle without breaking the existing root checks.

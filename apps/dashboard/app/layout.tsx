@@ -9,10 +9,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Cortex Dashboard",
   description: "Run monitoring dashboard for the Cortex Agentic System.",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     title: "Cortex",
     statusBarStyle: "black-translucent"
+  },
+  icons: {
+    apple: "/apple-icon.svg",
+    icon: "/icon.svg"
   }
 };
 

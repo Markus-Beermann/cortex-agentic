@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
 import { startTransition, useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { getErrorMessage } from "@/lib/api-client";
 import { formatCount, formatShortId, formatTimestamp } from "@/lib/format";
@@ -159,7 +157,7 @@ export function RunListScreen() {
           {snapshot.runs.length > 0 ? (
             <div className="run-grid">
               {snapshot.runs.map((run) => (
-                <Link key={run.id} href={`/runs?id=${encodeURIComponent(run.id)}`} className="run-card">
+                <Link key={run.id} to={`/runs?id=${encodeURIComponent(run.id)}`} className="run-card">
                   <div className="run-card-top">
                     <StatusBadge status={run.status} />
                     <span className="run-card-id">{formatShortId(run.id)}</span>
