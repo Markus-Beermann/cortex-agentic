@@ -51,3 +51,11 @@ Milestone-level log for collaboration decisions and meaningful repository progre
 - Added PostgreSQL-backed `deferred_tasks` and `architecture_snapshots`, plus idempotent seeding of the Debussy Mermaid snapshot from docs at server startup.
 - Added George Orwell as a registry-only implementation persona for direct code work without mutating the orchestration role enum.
 - Defaulted `HERMES_MAIL_FROM` to `onboarding@resend.dev` so Hermes can send through Resend without requiring a custom verified sender during onboarding.
+
+## 2026-04-06
+
+- Added a chat-focused LLM abstraction layer with explicit provider registry entries for Anthropic and OpenAI Codex.
+- Extended the Railway PostgreSQL schema with `chat_messages` and `llm_assignments` so dashboard conversations survive reloads instead of pretending memory is optional.
+- Added server endpoints for chat, chat history, registry discovery, LLM provider discovery, and GitHub repo discovery.
+- Injected agent bootstrap markdown into `/chat` system prompts so Debussy answers as Debussy instead of generic foundation-model soup.
+- Added a new dashboard chat screen with repo, agent, and LLM selectors plus persisted local preferences for the selected repo, agent, and model.

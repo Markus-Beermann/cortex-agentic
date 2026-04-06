@@ -2,13 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   normalizeEventTimestamp,
+  pgGetChatHistory,
+  pgGetLLMAssignment,
   pgListArchitectureSnapshots,
   pgListDeferredTasks,
   pgListEvents,
   pgListFeedItems,
   pgReleaseDeferredTask,
   pgSaveArchitectureSnapshot,
-  pgSaveDeferredTask
+  pgSaveChatMessage,
+  pgSaveDeferredTask,
+  pgSetLLMAssignment
 } from "../../src/server/pg-queries";
 
 describe("pgListEvents", () => {
@@ -119,6 +123,94 @@ describe("pgListEvents", () => {
       releasedAt: null,
       createdBy: "markus"
     });
+  });
+
+  it("saves a chat message with metadata", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [
+          {
+            id: 42,
+            role: "assistant",
+            content: "Debussy is online.",
+            agent_id: "role/coordinator",
+            repo_id: "Markus-Beermann/cortex-agentic",
+            llm_id: "anthropic",
+            created_at: new Date("2026-04-06T08:00:00.000Z")
+          }
+        ]
+      })
+    };
+
+    const message = await pgSaveChatMessage(pool as never, {
+      sessionId: "user_123",
+      role: "assistant",
+      content: "Debussy is online.",
+      agentId: "role/coordinator",
+      repoId: "Markus-Beermann/cortex-agentic",
+      llmId: "anthropic"
+    });
+
+    expect(message).toEqual({
+      id: 42,
+      message: {
+        role: "assistant",
+        content: "Debussy is online."
+      },
+      agentId: "role/coordinator",
+      repoId: "Markus-Beermann/cortex-agentic",
+      llmId: "anthropic",
+      createdAt: "2026-04-06T08:00:00.000Z"
+    });
+  });
+
+  it("loads chat history in chronological order", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [
+          {
+            role: "user",
+            content: "Plan the next step."
+          },
+          {
+            role: "assistant",
+            content: "Start with the provider contract."
+          }
+        ]
+      })
+    };
+
+    const history = await pgGetChatHistory(pool as never, "user_123");
+
+    expect(history).toEqual([
+      { role: "user", content: "Plan the next step." },
+      { role: "assistant", content: "Start with the provider contract." }
+    ]);
+  });
+
+  it("returns the latest llm assignment for an agent", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [{ llm_id: "openai-codex" }]
+      })
+    };
+
+    const assignment = await pgGetLLMAssignment(pool as never, "role/coordinator");
+
+    expect(assignment).toBe("openai-codex");
+  });
+
+  it("persists a new llm assignment", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({ rows: [] })
+    };
+
+    await pgSetLLMAssignment(pool as never, "role/coordinator", "anthropic", "user_123");
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO llm_assignments"),
+      ["role/coordinator", "anthropic", "user_123"]
+    );
   });
 
   it("lists deferred tasks with optional filters", async () => {

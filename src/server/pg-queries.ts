@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 
 import type {
   ArchitectureSnapshot,
+  ChatMessage,
   DeferredTask,
   DeferredTaskStatus,
   Output,
@@ -12,6 +13,7 @@ import type {
   Task
 } from "../core/contracts";
 import {
+  validateChatMessage,
   validateArchitectureSnapshot,
   validateDeferredTask,
   validateOutput,
@@ -22,7 +24,7 @@ import {
 import type { FeedItem } from "../hermes/contracts";
 import { validateFeedItem } from "../hermes/contracts";
 
-function normalizeEventTimestamp(value: unknown): string {
+export function normalizeEventTimestamp(value: unknown): string {
   if (value instanceof Date) {
     return value.toISOString();
   }
@@ -32,6 +34,117 @@ function normalizeEventTimestamp(value: unknown): string {
   }
 
   throw new Error(`Unsupported run event timestamp value: ${String(value)}`);
+}
+
+type StoredChatMessageRow = {
+  id: number;
+  role: string;
+  content: string;
+  agent_id: string | null;
+  repo_id: string | null;
+  llm_id: string | null;
+  created_at: string | Date;
+};
+
+function mapChatMessageRow(row: Pick<StoredChatMessageRow, "role" | "content">): ChatMessage {
+  return validateChatMessage({
+    role: row.role,
+    content: row.content
+  });
+}
+
+export async function pgSaveChatMessage(
+  pool: Pool,
+  input: {
+    sessionId: string;
+    role: ChatMessage["role"];
+    content: string;
+    agentId?: string | null;
+    repoId?: string | null;
+    llmId?: string | null;
+  }
+): Promise<{
+  id: number;
+  message: ChatMessage;
+  agentId: string | null;
+  repoId: string | null;
+  llmId: string | null;
+  createdAt: string;
+}> {
+  const result = await pool.query<StoredChatMessageRow>(
+    `INSERT INTO chat_messages (session_id, role, content, agent_id, repo_id, llm_id)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, role, content, agent_id, repo_id, llm_id, created_at`,
+    [
+      input.sessionId,
+      input.role,
+      input.content,
+      input.agentId ?? null,
+      input.repoId ?? null,
+      input.llmId ?? null
+    ]
+  );
+
+  const row = result.rows[0];
+
+  return {
+    id: row.id,
+    message: mapChatMessageRow(row),
+    agentId: row.agent_id,
+    repoId: row.repo_id,
+    llmId: row.llm_id,
+    createdAt: normalizeEventTimestamp(row.created_at)
+  };
+}
+
+export async function pgGetChatHistory(
+  pool: Pool,
+  sessionId: string,
+  limit = 50
+): Promise<ChatMessage[]> {
+  const normalizedLimit = Number.isFinite(limit)
+    ? Math.max(1, Math.min(200, Math.floor(limit)))
+    : 50;
+  const result = await pool.query<Pick<StoredChatMessageRow, "role" | "content">>(
+    `SELECT role, content
+     FROM (
+       SELECT id, role, content, created_at
+       FROM chat_messages
+       WHERE session_id = $1
+       ORDER BY created_at DESC, id DESC
+       LIMIT $2
+     ) recent_messages
+     ORDER BY created_at ASC, id ASC`,
+    [sessionId, normalizedLimit]
+  );
+
+  return result.rows.map(mapChatMessageRow);
+}
+
+export async function pgGetLLMAssignment(pool: Pool, agentId: string): Promise<string | null> {
+  const result = await pool.query<{ llm_id: string }>(
+    `SELECT llm_id
+     FROM llm_assignments
+     WHERE agent_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT 1`,
+    [agentId]
+  );
+
+  return result.rows[0]?.llm_id ?? null;
+}
+
+export async function pgSetLLMAssignment(
+  pool: Pool,
+  agentId: string,
+  llmId: string,
+  setBy: string
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO llm_assignments (agent_id, llm_id, set_by)
+     VALUES ($1, $2, $3)`,
+    [agentId, llmId, setBy]
+  );
 }
 
 export async function pgListRuns(pool: Pool): Promise<RunState[]> {
@@ -364,5 +477,3 @@ function mapArchitectureSnapshotRow(row: {
     createdAt: normalizeEventTimestamp(row.created_at)
   });
 }
-
-export { normalizeEventTimestamp };

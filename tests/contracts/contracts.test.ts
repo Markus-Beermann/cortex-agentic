@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ChatMessageSchema,
   OutputDraftSchema,
   OutputSchema,
   ReflectionReportSchema,
@@ -24,6 +25,15 @@ describe("contracts", () => {
       approvalMode: "auto",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a valid chat message contract", () => {
+    const result = ChatMessageSchema.safeParse({
+      role: "assistant",
+      content: "Keep the prompt grounded in the bootstrap."
     });
 
     expect(result.success).toBe(true);

@@ -89,5 +89,30 @@ export async function initSchema(): Promise<void> {
       notes        TEXT,
       created_at   TIMESTAMPTZ NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id          SERIAL PRIMARY KEY,
+      session_id  TEXT NOT NULL,
+      role        TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      agent_id    TEXT,
+      repo_id     TEXT,
+      llm_id      TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS chat_messages_session_id_created_at_idx
+      ON chat_messages (session_id, created_at DESC, id DESC);
+
+    CREATE TABLE IF NOT EXISTS llm_assignments (
+      id          SERIAL PRIMARY KEY,
+      agent_id    TEXT NOT NULL,
+      llm_id      TEXT NOT NULL,
+      set_by      TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS llm_assignments_agent_id_created_at_idx
+      ON llm_assignments (agent_id, created_at DESC, id DESC);
   `);
 }

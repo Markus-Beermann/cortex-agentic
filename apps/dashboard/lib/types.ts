@@ -76,3 +76,31 @@ export type DeferredTask = {
   releasedAt: string | null;
   createdBy: string;
 };
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type LLMProviderOption = {
+  id: string;
+  displayName: string;
+};
+
+export type RepoOption = {
+  id: string;
+  name: string;
+  fullName: string;
+};
+
+export type RegistryEntry = {
+  id: string;
+  roleId: string;
+  technicalName: string;
+  personaName: string;
+  aliases: string[];
+  displayName: string;
+  bootstrapPath: string;
+  capabilities: string[];
+  allowedHandoffs: string[];
+};

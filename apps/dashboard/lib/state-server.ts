@@ -1,7 +1,11 @@
 import type {
+  ChatMessage,
   DeferredTask,
   DeferredTaskStatus,
+  LLMProviderOption,
   Output,
+  RegistryEntry,
+  RepoOption,
   OutputArtifact,
   RunEvent,
   RunState,
@@ -86,6 +90,16 @@ function readDeferredTaskStatus(value: unknown): DeferredTaskStatus {
   }
 
   return status;
+}
+
+function readChatRole(value: unknown): ChatMessage["role"] {
+  const role = readString(value, "role");
+
+  if (role !== "user" && role !== "assistant") {
+    throw new StateServerError("Invalid chat role field from state server.", 502);
+  }
+
+  return role;
 }
 
 function parseBody(value: string): unknown {
@@ -296,6 +310,72 @@ function normalizeDeferredTask(value: unknown): DeferredTask {
   };
 }
 
+function readNumber(value: unknown, fieldName: string): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    throw new StateServerError(`Invalid ${fieldName} field from state server.`, 502);
+  }
+
+  return value;
+}
+
+function normalizeChatMessage(value: unknown): ChatMessage {
+  if (!isRecord(value)) {
+    throw new StateServerError("Invalid chat message payload.", 502);
+  }
+
+  return {
+    role: readChatRole(value.role),
+    content: readString(value.content, "content")
+  };
+}
+
+function normalizeLLMProviderOption(value: unknown): LLMProviderOption {
+  if (!isRecord(value)) {
+    throw new StateServerError("Invalid LLM provider payload.", 502);
+  }
+
+  return {
+    id: readString(value.id, "id"),
+    displayName: readString(value.displayName, "displayName")
+  };
+}
+
+function normalizeRepoOption(value: unknown): RepoOption {
+  if (!isRecord(value)) {
+    throw new StateServerError("Invalid repository payload.", 502);
+  }
+
+  return {
+    id: readString(value.id, "id"),
+    name: readString(value.name, "name"),
+    fullName: readString(value.full_name, "full_name")
+  };
+}
+
+function normalizeRegistryEntry(value: unknown): RegistryEntry {
+  if (!isRecord(value)) {
+    throw new StateServerError("Invalid registry entry payload.", 502);
+  }
+
+  return {
+    id: readString(value.id, "id"),
+    roleId: readString(value.roleId, "roleId"),
+    technicalName: readString(value.technicalName, "technicalName"),
+    personaName: readString(value.personaName, "personaName"),
+    aliases: Array.isArray(value.aliases)
+      ? readStringArray(value.aliases, "aliases")
+      : [],
+    displayName: readString(value.displayName, "displayName"),
+    bootstrapPath: readString(value.bootstrapPath, "bootstrapPath"),
+    capabilities: Array.isArray(value.capabilities)
+      ? readStringArray(value.capabilities, "capabilities")
+      : [],
+    allowedHandoffs: Array.isArray(value.allowedHandoffs)
+      ? readStringArray(value.allowedHandoffs, "allowedHandoffs")
+      : []
+  };
+}
+
 export async function listTasks(runId: string): Promise<Task[]> {
   const payload = await requestJson(`/runs/${runId}/tasks`);
   if (!Array.isArray(payload)) throw new StateServerError("Invalid tasks payload.", 502);
@@ -348,4 +428,66 @@ export async function releaseDeferredTask(id: string): Promise<DeferredTask> {
   return normalizeDeferredTask(
     await requestJson(`/deferred-tasks/${id}/release`, { method: "PATCH" })
   );
+}
+
+export async function readChatHistory(sessionId: string): Promise<ChatMessage[]> {
+  const payload = await requestJson(`/chat/history?sessionId=${encodeURIComponent(sessionId)}`);
+
+  if (!Array.isArray(payload)) {
+    throw new StateServerError("Invalid chat history payload.", 502);
+  }
+
+  return payload.map(normalizeChatMessage);
+}
+
+export async function sendChatMessage(input: {
+  message: string;
+  agentId: string;
+  repoId?: string;
+  llmId: string;
+  sessionId: string;
+}): Promise<{ reply: string; messageId: number }> {
+  const payload = await requestJson("/chat", {
+    method: "POST",
+    body: input
+  });
+
+  if (!isRecord(payload)) {
+    throw new StateServerError("Invalid chat response payload.", 502);
+  }
+
+  return {
+    reply: readString(payload.reply, "reply"),
+    messageId: readNumber(payload.messageId, "messageId")
+  };
+}
+
+export async function listLLMProviderOptions(): Promise<LLMProviderOption[]> {
+  const payload = await requestJson("/llm-providers");
+
+  if (!Array.isArray(payload)) {
+    throw new StateServerError("Invalid llm providers payload.", 502);
+  }
+
+  return payload.map(normalizeLLMProviderOption);
+}
+
+export async function listRepos(): Promise<RepoOption[]> {
+  const payload = await requestJson("/repos");
+
+  if (!Array.isArray(payload)) {
+    throw new StateServerError("Invalid repositories payload.", 502);
+  }
+
+  return payload.map(normalizeRepoOption);
+}
+
+export async function listRegistryEntries(): Promise<RegistryEntry[]> {
+  const payload = await requestJson("/registry");
+
+  if (!Array.isArray(payload)) {
+    throw new StateServerError("Invalid registry payload.", 502);
+  }
+
+  return payload.map(normalizeRegistryEntry);
 }

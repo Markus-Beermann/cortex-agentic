@@ -41,6 +41,12 @@ export function AppHeader() {
             >
               Tasks
             </Link>
+            <Link
+              href="/chat"
+              className={`topbar-nav-link${pathname === "/chat" ? " topbar-nav-link-active" : ""}`}
+            >
+              Chat
+            </Link>
           </nav>
 
           <div className="topbar-user">
